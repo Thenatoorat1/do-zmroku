@@ -765,6 +765,7 @@ function zFrame(z){
   const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
   if(z.da)return[z.da.n,Math.min(7,Math.floor(z.da.t*9)),z.da.flip];
   if(z.state==='killed')return['idle',0];
+  {const hf=hitFrame(z);if(hf)return hf}
   if(z.hitT>0)return['hit',by(1-z.hitT/.55,8)];
   if(z.snack)return['snack',Math.min(15,Math.floor(z.snack.t*SN_FPS))];
   if(z.state==='attack')return['attack',by(z.atk/1.15,8)];
@@ -1344,7 +1345,11 @@ function sfx(type,x){
 const SND={buf:{},load:{},last:{},t:{},stepPh:-1,
   n:{kroki:4,bieg:4,kij_zamach:3,kij_trafienie:3,noz_zamach:3,noz_trafienie:3,lom_zamach:3,lom_trafienie:3,wrecz_zamach:3,wrecz_trafienie:3,
      zombie_jek:6,zombie_ryk:4,zombie_je:4,drzwi_otwieranie:24,drzwi_wywazanie:3,szafka_przeszukiwanie:3,podniesienie:2,wspinanie:2,upadek:2,
-     jedzenie:3,picie:2,menu_klik:1,puszki_alarm:1}};
+     jedzenie:3,picie:2,menu_klik:1,puszki_alarm:1,
+     kulejaca_skok:3,kulejaca_ladowanie:2,kulejaca_jek:4,kulejaca_szuranie:3,
+     muffinek_jek:3,muffinek_rzut:3,muffinka_trafienie:3,oszolomienie:2,muffinek_furia:2,schabowy_wyciaganie:1,schabowy_uderzenie:4,muffinek_przekaska:3,
+     patelnia_zamach:3,patelnia_trafienie:3,tasak_zamach:3,tasak_trafienie:3,kilof_zamach:3,kilof_trafienie:3,
+     kij_hokejowy_zamach:3,kij_hokejowy_trafienie:3,saperka_zamach:3,saperka_trafienie:3}};
 function sndLoad(path){if(!ac||SND.buf[path]||SND.load[path])return;
   SND.load[path]=fetch('snd/'+path+'.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()})
     .then(a=>new Promise((ok,no)=>ac.decodeAudioData(a,ok,no))).then(b=>{SND.buf[path]=b}).catch(()=>{setTimeout(()=>{delete SND.load[path]},15000)})}
@@ -1361,8 +1366,15 @@ function snd(name,x,vol=1,o={}){
   if(x!=null&&player&&ac.createStereoPanner){const pn=ac.createStereoPanner();pn.pan.value=clamp((x-player.x)/700,-.8,.8);g.connect(pn);pn.connect(master)}else g.connect(master);
   s.start();return true}
 /* rodzaj broni → zestaw dźwięków (kij / nóż / łom / wręcz) */
+const WKIND={noz:'noz',hunting_knife:'noz',lom:'lom',steel_pipe:'lom',patelnia:'patelnia',tasak:'tasak',machete:'tasak',kilof:'kilof',kij_hokejowy:'kij_hokejowy',army_shovel:'saperka'};
 function wKind(hit){const w=player&&player.weapon,id=w?w.id:'piesci',d=WP[id]||{};
-  if(id==='siekiera')return hit?'noz':'lom';if(id==='noz')return'noz';if(id==='lom')return'lom';if(d.fists||!w)return'wrecz';return'kij'}
+  if(id==='siekiera')return hit?'tasak':'lom';if(WKIND[id])return WKIND[id];if(d.fists||!w)return'wrecz';return'kij'}
+/* głosy zależne od rodzaju zombie */
+function zGroan(z){if(z.eating)return snd('zombie_je',z.x,.5);if(z.type==='kulejaca')return snd('kulejaca_jek',z.x,.6);if(z.type==='muffinek')return snd(z.snack?'muffinek_przekaska':'muffinek_jek',z.x,.6);return snd('zombie_jek',z.x,.6)}
+function zRoar(z){if(z.type==='kulejaca')return snd('kulejaca_skok',z.x,.65);if(z.type==='muffinek')return snd('muffinek_jek',z.x,.9);return snd('zombie_ryk',z.x,.8)}
+/* szuranie nogi Kulejącej: raz na cykl kroku */
+function zStepSnd(){if(!ac||!zombies||!player)return;for(const z of zombies){if(z.dead||z.type!=='kulejaca'||!z.moving||z.lunge)continue;
+  const c=Math.floor((z.walkP||0)*1.5/8);if(z._sc==null){z._sc=c;continue}if(c!==z._sc){z._sc=c;if(Math.abs(z.x-player.x)<650&&z.f===player.f)snd('kulejaca_szuranie',z.x,.45)}}}
 /* drzwi: każde drzwi mają stały rodzaj dźwięku; przy skradaniu – ciche otwieranie */
 function doorSnd(d,x,v){let grp;if(player&&player.crouch)grp=4;else if(d){if(d.sg==null)d.sg=[0,1,2,3,5][Math.floor(Math.random()*5)];grp=d.sg}else grp=0;
   return snd('drzwi_otwieranie',x,grp===4?v*1.3:v,{i:grp*4+1+Math.floor(Math.random()*4)})}
@@ -1450,7 +1462,7 @@ function emitNoise(x,f,r,kind){
     z.state='investigate';z.tx=x+(R()*50-25);z.tf=f;z.look=3+R()*2;z.sus=Math.max(z.sus,.45);
   }
 }
-function toChase(z){if(z.state!=='chase'&&z.state!=='attack'){snd('zombie_ryk',z.x,.8)||sfx('groan',z.x);if(R()<.6)emitNoise(z.x,z.f,150,'zombie')}z.state='chase';z.sus=1;z.lastSeen=0;z.tx=player.x;z.tf=player.f}
+function toChase(z){if(z.state!=='chase'&&z.state!=='attack'){zRoar(z)||sfx('groan',z.x);if(R()<.6)emitNoise(z.x,z.f,150,'zombie')}z.state='chase';z.sus=1;z.lastSeen=0;z.tx=player.x;z.tf=player.f}
 
 /* ---------- perception ---------- */
 function canSee(z){
@@ -1493,7 +1505,7 @@ function updZombie(z,dt){
   if(z.lunge){updLunge(z,dt);return}
   if(z.rage){updRage(z,dt);return}
   if(z.thr){updThrow(z,dt);return}
-  z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)(z.eating?snd('zombie_je',z.x,.5):snd('zombie_jek',z.x,.6))||sfx('groan',z.x)}
+  z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)zGroan(z)||sfx('groan',z.x)}
   if(z.stagger>0){z.stagger-=dt;moveEnt(z,z.kb*dt);z.kb*=.88;z.moving=false;return}
   const p=player,vis=canSee(z),dist=Math.abs(p.x-z.x);
   const night=phase()>.6;
@@ -2568,7 +2580,7 @@ ZT.kulejaca.text='Kobieta w kwiecistej sukience i rozpinanym swetrze, z wykręco
 function lungeCheck(z,p,dt){z.lungeCD=(z.lungeCD||0)-dt;if(z.lungeCD>0)return false;
   const d=p.x-z.x,ad=Math.abs(d);if(z.f!==p.f||p.stair||p.climb||p.hidden||p.dead||ad<85||ad>250||canSee(z)<=0)return false;
   const dir=Math.sign(d),[l,r]=regionBounds(z.x,z.f);z.face=dir;z.moving=false;
-  z.lunge={t:0,x0:z.x,x1:clamp(p.x-dir*34,l+10,r-10),dir,hit:false};z.lungeCD=4.5+R()*2;snd('zombie_ryk',z.x,.9)||sfx('groan',z.x);return true}
+  z.lunge={t:0,x0:z.x,x1:clamp(p.x-dir*34,l+10,r-10),dir,hit:false};z.lungeCD=4.5+R()*2;snd('kulejaca_skok',z.x,1)||sfx('groan',z.x);return true}
 const LW=.4,LF=.46,LL=.5;
 /* animacja skoku (8 klatek, uniesienie w locie jest już w grafice) */
 ZT.kulejaca.jm=[[0, 0, 115, 162, 94.7, 161.9], [117, 0, 137, 166, 97.4, 165.6], [256, 0, 196, 186, 120.1, 185.7], [454, 0, 243, 140, 148.1, 190.5], [699, 0, 212, 178, 127.0, 244.4], [913, 0, 151, 182, 84.1, 211.1], [1066, 0, 134, 152, 85.7, 152.4], [1202, 0, 90, 200, 74.6, 200.0]];ZT.kulejaca.jimg=loadImg('a/npc/kulejaca_skok.webp');
@@ -2576,7 +2588,7 @@ function updLunge(z,dt){const L=z.lunge,p=player;L.t+=dt;z.moving=false;
   if(L.t<LW){z.jy=0;return}
   if(L.t<LW+LF){const u=(L.t-LW)/LF;z.x=lerp(L.x0,L.x1,1-(1-u)*(1-u));z.jy=okI(ZT.kulejaca.jimg)?0:-Math.sin(Math.PI*u)*44;
     if(!L.hit&&u>.55&&z.f===p.f&&!p.stair&&!p.hidden&&!p.dead&&Math.abs(p.x-z.x)<56){L.hit=true;hurtPlayer(phase()>.6?22:18,z);p.x=clamp(p.x+L.dir*18,40,WORLD_W-40);shake=14}return}
-  z.jy=0;if(L.t>=LW+LF+LL){z.lunge=null;if(L.hit){z.state='attack';z.atk=.3;z.hitDone=true}else{z.stagger=.35;z.kb=0}}}
+  z.jy=0;if(!L.landed){L.landed=1;snd('kulejaca_ladowanie',z.x,L.hit?1:.75)}if(L.t>=LW+LF+LL){z.lunge=null;if(L.hit){z.state='attack';z.atk=.3;z.hitDone=true}else{z.stagger=.35;z.kb=0}}}
 function lungeFrame(z){const t=z.lunge.t;
   if(okI(ZT.kulejaca.jimg)){if(t<LW)return['jump',Math.min(1,Math.floor(t/LW*2))];if(t<LW+LF)return['jump',2+Math.min(3,Math.floor((t-LW)/LF*4))];return['jump',6+Math.min(1,Math.floor((t-LW-LF)/LL*2))]}
   if(t<LW)return['alert',Math.min(7,Math.floor(t/LW*8))];
@@ -2656,18 +2668,18 @@ function throwCheck(z,p,dt){z.thrCD=(z.thrCD==null?.8+R()*1.5:z.thrCD)-dt;if(z.t
 function updThrow(z,dt){const T=z.thr,p=player;T.t+=dt;z.moving=false;if(!T.rel)z.face=Math.sign(p.x-z.x)||z.face;
   if(!T.rel&&T.t>=TH_REL/TH_FPS){T.rel=true;const k=MU_K(),x0=z.x+z.face*(477-384)*k,y0=z.y+(413-748)*k;
     const tx=p.x,ty=p.y-112,dist=Math.abs(tx-x0),dur=clamp(dist/430,.45,1.15),g=820;
-    MUP.push({x:x0,y:y0,vx:(tx-x0)/dur,vy:(ty-y0-.5*g*dur*dur)/dur,g,f:z.f,t:0,face:z.face});sfx('swing',z.x)}
+    MUP.push({x:x0,y:y0,vx:(tx-x0)/dur,vy:(ty-y0-.5*g*dur*dur)/dur,g,f:z.f,t:0,face:z.face});snd('muffinek_rzut',z.x,.8)||sfx('swing',z.x)}
   if(T.t>=8/TH_FPS){z.thr=null;z.state='chase'}}
 /* --- furia --- */
 const RG={scream:[8,7],draw:[8,8],beat:[16,9]};
 function muffHit(z){if(z.type!=='muffinek'||z.hp<=0)return;z.snack=null;z.thr=null;z.mh=(z.mh||0)+1;
-  if(!z.raged&&!z.rage&&z.mh>=3&&muOk('rage_scream')){z.rage={ph:'scream',t:0};z.raged=true;z.stagger=0;z.hitT=0;snd('zombie_ryk',z.x,1)||sfx('groan',z.x);shake=8;
+  if(!z.raged&&!z.rage&&z.mh>=3&&muOk('rage_scream')){z.rage={ph:'scream',t:0};z.raged=true;z.stagger=0;z.hitT=0;snd('muffinek_furia',z.x,1)||sfx('groan',z.x);shake=8;
     if(!G.muffRage){G.muffRage=true;toast('Muffinek się wkurzył. Uciekaj albo kończ szybko.',2600)}}}
 function rageHitPlayer(z){const p=player;if(p.dead||p.hidden||p.stair||p.climb||z.f!==p.f||Math.abs(p.x-z.x)>78)return;
-  p.hp-=phase()>.6?8:6;p.hurt=.3;shake=10;flashT=.35;sfx('hurt');sfx('hit',p.x);for(let i=0;i<6;i++)blood(p.x,p.y-100,p.f,z.face);
+  p.hp-=phase()>.6?8:6;p.hurt=.3;shake=10;flashT=.35;sfx('hurt');snd('schabowy_uderzenie',p.x,.9)||sfx('hit',p.x);for(let i=0;i<6;i++)blood(p.x,p.y-100,p.f,z.face);
   p.search=null;p.peek=null;p.atk=0;p.stun=Math.max(p.stun||0,.75);p.stunT=0;moveEnt(p,z.face*6)}
 function updRage(z,dt){const R_=z.rage,p=player;R_.t+=dt;z.moving=false;z.stagger=0;
-  if(R_.ph==='scream'){z.face=Math.sign(p.x-z.x)||z.face;if(R_.t>=RG.scream[0]/RG.scream[1]){R_.ph='draw';R_.t=0}return}
+  if(R_.ph==='scream'){z.face=Math.sign(p.x-z.x)||z.face;if(R_.t>=RG.scream[0]/RG.scream[1]){R_.ph='draw';R_.t=0;snd('schabowy_wyciaganie',z.x,.8)}return}
   if(R_.ph==='draw'){if(R_.t>=RG.draw[0]/RG.draw[1]){R_.ph='go';R_.t=0}return}
   if(R_.ph==='go'){const d=p.x-z.x;if(p.dead||z.f!==p.f||p.stair||p.hidden||Math.abs(d)>520||R_.t>6){z.rage=null;toChase(z);return}
     z.face=Math.sign(d)||z.face;if(Math.abs(d)<60){R_.ph='beat';R_.t=0;R_.hit=-1;return}
@@ -2684,14 +2696,14 @@ const SN_FPS=6,SN_DUR=16/SN_FPS;
 function muffSnack(z,dt){if(z.type!=='muffinek')return false;
   if(z.snack){if(z.state!=='idle'&&z.state!=='wander'){z.snack=null;return false}z.snack.t+=dt;const fi=Math.floor(z.snack.t*SN_FPS);
     z.moving=false;if(fi<2||fi>=15){moveEnt(z,z.face*dt*14)}if(z.snack.t>=SN_DUR)z.snack=null;return true}
-  if((z.state==='wander'||z.state==='idle')&&!z.eating&&muOk('snack')&&R()<dt*.03){z.snack={t:0};return true}return false}
+  if((z.state==='wander'||z.state==='idle')&&!z.eating&&muOk('snack')&&R()<dt*.03){z.snack={t:0};snd('muffinek_przekaska',z.x,.55);return true}return false}
 /* --- pociski, rozbicia, ogłuszenie --- */
 function updMuffFx(dt){const p=player;
   for(const m of MUP){m.t+=dt;m.vy+=m.g*dt;m.x+=m.vx*dt;m.y+=m.vy*dt;
     if(p&&!p.dead&&!p.hidden&&!p.stair&&!p.climb&&m.f===p.f&&Math.abs(m.x-p.x)<24&&m.y>p.y-(p.crouch?120:172)&&m.y<p.y-8){m.done=true;
-      MUB.push({x:m.x,y:m.y,t:0});p.stun=1.6;p.stunT=0;p.search=null;p.peek=null;p.atk=0;hold.left=hold.right=hold.run=false;sfx('hit',p.x);shake=6;
+      MUB.push({x:m.x,y:m.y,t:0});p.stun=1.6;p.stunT=0;p.search=null;p.peek=null;p.atk=0;hold.left=hold.right=hold.run=false;snd('muffinka_trafienie',p.x,.9)||sfx('hit',p.x);snd('oszolomienie',null,.45);shake=6;
       if(!G.muffStun){G.muffStun=true;toast('Oberwałeś muffinką. Kręci ci się w głowie.',2400)}}
-    else if(m.y>F[m.f]-4||m.t>3){m.done=true;MUB.push({x:m.x,y:F[m.f]-14,t:0})}}
+    else if(m.y>F[m.f]-4||m.t>3){m.done=true;MUB.push({x:m.x,y:F[m.f]-14,t:0});snd('muffinka_trafienie',m.x,.5)}}
   MUP=MUP.filter(m=>!m.done);for(const b of MUB)b.t+=dt;MUB=MUB.filter(b=>b.t<.5);
   if(p&&p.stun>0)p.stunT=(p.stunT||0)+dt}
 function drawMuffFx(){const c=ctx,k=MU_K();
@@ -2740,7 +2752,8 @@ drawIcon=(function(_d){return function(c,id,W,Hh){const L=(x1,y1,x2,y2,w,col)=>{
   if(id==='kulki'){for(let i=0;i<7;i++){c.fillStyle=i%2?'#8d9296':'#76706a';c.beginPath();c.arc(16+(i%4)*11,24+Math.floor(i/4)*12,5,0,7);c.fill()}return}
   return _d(c,id,W,Hh)}})(drawIcon);
 /* dźwięki broni: na razie istniejące zestawy wg typu, własne nagrania podpinamy później */
-wKind=(function(_k){return function(hit){const w=player&&player.weapon,d=w&&WP[w.id];if(!d||!d.typ)return _k(hit);
+const WK2={siekiera_strazacka:h=>h?'tasak':'kilof',kosa_bojowa:()=>'tasak',widly:h=>h?'kilof':'kij_hokejowy',deska_gwozdzie:()=>'kij_hokejowy',kij_hokejowy_podwojny:()=>'kij_hokejowy',klucz_hydrauliczny:()=>'lom',mlotek:()=>'lom'};
+wKind=(function(_k){return function(hit){const w=player&&player.weapon,d=w&&WP[w.id];if(w&&typeof WKIND!=='undefined'&&WKIND[w.id])return WKIND[w.id];if(w&&WK2[w.id])return WK2[w.id](hit);if(!d||!d.typ)return _k(hit);
   if(d.typ==='sieczna')return hit?'noz':'lom';if(d.typ==='kłuta')return'lom';if(d.typ==='pięści')return'wrecz';return w.id==='patelnia'?'lom':'kij'}})(wKind);
 /* --- łupy --- */
 const addL=(t,...e)=>{if(t)t.push(...e)};
@@ -2835,6 +2848,26 @@ function drawWeaponsFx(){const c=ctx;
   for(const q of PROJ){if(q.k==='belt'){c.strokeStyle='#5a4028';c.lineWidth=3;c.beginPath();c.moveTo(q.x-Math.sign(q.vx)*26,q.y);c.lineTo(q.x,q.y);c.stroke();c.fillStyle='#9aa0a4';c.fillRect(q.x-2,q.y-2,4,4)}
     else{c.fillStyle='#8d9296';c.beginPath();c.arc(q.x,q.y,3,0,7);c.fill()}}
   for(const k of CLOUD){c.fillStyle='rgba(235,238,240,'+(.55*(1-k.t/k.life))+')';c.beginPath();c.arc(k.x,k.y,k.r,0,7);c.fill()}}
+
+/* ================= TRAFIENIA ZOMBIE: animacja zależna od rodzaju broni (Kulejąca, Muffinek) ================= */
+const TRM={"kulejaca": {"hit_piesc": [[0, 0, 71, 197, 61.4, 196.8], [73, 0, 71, 196, 63.0, 195.8], [146, 0, 112, 189, 85.7, 188.9], [260, 0, 89, 192, 60.3, 191.5], [351, 0, 107, 190, 72.0, 189.9], [460, 0, 97, 192, 66.7, 191.5], [559, 0, 98, 182, 76.2, 182.0], [659, 0, 69, 199, 59.8, 199.5]], "hit_obuch_lekki": [[730, 0, 67, 201, 59.8, 200.5], [799, 0, 97, 187, 70.9, 187.3], [898, 0, 95, 176, 68.3, 176.2], [995, 0, 107, 187, 75.7, 187.3], [1104, 0, 86, 188, 67.7, 188.4], [1192, 0, 88, 201, 70.4, 201.1], [1282, 0, 119, 188, 80.4, 188.4], [1403, 0, 70, 200, 61.4, 200.0]], "hit_obuch_ciezki": [[1475, 0, 70, 199, 64.6, 198.9], [1547, 0, 138, 196, 104.8, 196.3], [1687, 0, 153, 188, 91.5, 187.8], [1842, 0, 130, 187, 79.9, 187.3], [0, 203, 127, 167, 101.1, 166.7], [129, 203, 96, 161, 74.6, 161.4], [227, 203, 87, 191, 75.1, 191.0], [316, 203, 76, 200, 65.6, 200.0]], "hit_ciecie": [[394, 203, 76, 199, 65.1, 198.9], [472, 203, 117, 198, 96.8, 197.9], [591, 203, 106, 191, 74.6, 191.0], [699, 203, 90, 179, 70.9, 178.8], [791, 203, 84, 190, 69.3, 190.5], [877, 203, 104, 184, 77.8, 183.6], [983, 203, 105, 200, 76.2, 200.0], [1090, 203, 81, 201, 71.4, 200.5]], "hit_klucie": [[1173, 203, 65, 198, 58.2, 197.9], [1240, 203, 92, 187, 69.8, 187.3], [1334, 203, 93, 170, 64.6, 170.4], [1429, 203, 87, 169, 59.8, 169.3], [1518, 203, 75, 193, 60.3, 193.1], [1595, 203, 90, 182, 72.0, 182.0], [1687, 203, 79, 193, 68.3, 192.6], [1768, 203, 70, 199, 59.3, 199.5]], "hit_strzal": [[1840, 203, 70, 199, 59.8, 198.9], [1912, 203, 81, 197, 63.5, 196.8], [0, 406, 88, 190, 74.6, 190.5], [90, 406, 92, 189, 75.7, 189.4], [184, 406, 84, 197, 57.1, 197.4], [270, 406, 88, 187, 75.1, 187.3], [360, 406, 74, 197, 68.3, 196.8], [436, 406, 65, 198, 57.7, 197.9]], "death_strzelba": [[503, 406, 80, 200, 69.8, 200.0], [585, 406, 112, 199, 88.4, 199.5], [699, 406, 171, 179, 102.6, 179.4], [872, 406, 213, 106, 124.9, 105.8], [1087, 406, 196, 105, 116.4, 105.3], [1285, 406, 197, 120, 115.9, 119.6], [1484, 406, 213, 91, 123.8, 91.0], [1699, 406, 213, 50, 125.4, 49.7]], "oslepienie": [[1914, 406, 88, 217, 68.3, 217.5], [0, 625, 98, 205, 78.3, 205.3], [100, 625, 90, 197, 68.3, 197.4], [192, 625, 91, 211, 66.7, 210.6], [285, 625, 117, 207, 76.2, 207.4], [404, 625, 104, 214, 75.1, 214.3], [510, 625, 90, 211, 69.8, 211.1], [602, 625, 75, 207, 61.9, 207.4]]}, "muffinek": {"hit_piesc": [[0, 0, 94, 198, 63.4, 198.4], [96, 0, 92, 200, 63.4, 200.0], [190, 0, 108, 193, 80.5, 193.2], [300, 0, 126, 197, 83.6, 196.9], [428, 0, 140, 195, 89.9, 195.3], [570, 0, 127, 201, 83.6, 201.0], [699, 0, 118, 195, 86.2, 194.8], [819, 0, 97, 202, 65.5, 202.1]], "hit_obuch_lekki": [[918, 0, 98, 203, 65.5, 202.6], [1018, 0, 113, 199, 75.3, 199.0], [1133, 0, 101, 183, 72.7, 182.9], [1236, 0, 116, 195, 84.7, 195.3], [1354, 0, 125, 196, 83.6, 196.4], [1481, 0, 105, 201, 71.2, 201.0], [1588, 0, 118, 194, 80.0, 193.8], [1708, 0, 101, 201, 66.5, 201.0]], "hit_obuch_ciezki": [[1811, 0, 90, 196, 62.3, 195.8], [1903, 0, 113, 194, 76.4, 194.3], [0, 205, 141, 195, 81.6, 195.3], [143, 205, 134, 194, 86.8, 193.8], [279, 205, 159, 193, 94.5, 192.7], [440, 205, 126, 166, 89.4, 166.2], [568, 205, 106, 183, 82.1, 183.4], [676, 205, 99, 202, 65.5, 202.1]], "hit_ciecie": [[777, 205, 98, 202, 64.9, 202.1], [877, 205, 154, 204, 106.5, 203.6], [1033, 205, 117, 193, 91.4, 193.2], [1152, 205, 97, 188, 77.9, 187.5], [1251, 205, 96, 192, 75.3, 192.2], [1349, 205, 102, 189, 80.5, 189.1], [1453, 205, 122, 197, 84.2, 197.4], [1577, 205, 97, 202, 64.9, 202.1]], "hit_klucie": [[1676, 205, 88, 202, 61.3, 202.1], [1766, 205, 116, 184, 79.5, 183.9], [1884, 205, 114, 164, 73.8, 163.6], [0, 411, 115, 157, 73.8, 156.9], [117, 411, 102, 203, 74.3, 203.1], [221, 411, 104, 198, 82.6, 197.9], [327, 411, 96, 202, 75.8, 201.6], [425, 411, 90, 202, 62.3, 201.6]], "hit_strzal": [[517, 411, 91, 202, 62.9, 202.1], [610, 411, 110, 207, 76.4, 206.8], [722, 411, 114, 199, 79.0, 199.5], [838, 411, 109, 201, 75.3, 200.5], [949, 411, 104, 202, 76.9, 202.1], [1055, 411, 106, 202, 77.9, 201.6], [1163, 411, 102, 198, 75.8, 197.9], [1267, 411, 94, 201, 63.9, 201.0]], "death_strzelba": [[1363, 411, 88, 202, 61.3, 201.6], [1453, 411, 125, 198, 98.7, 198.4], [1580, 411, 142, 192, 88.3, 192.2], [1724, 411, 191, 118, 122.6, 118.4], [0, 620, 175, 105, 110.1, 104.9], [177, 620, 192, 113, 120.5, 113.2], [371, 620, 206, 75, 129.4, 74.8], [579, 620, 208, 74, 130.9, 74.3]], "oslepienie": [[789, 620, 96, 206, 64.4, 205.7], [887, 620, 94, 204, 67.5, 203.6], [983, 620, 105, 186, 74.8, 186.0], [1090, 620, 151, 203, 86.8, 203.1], [1243, 620, 133, 204, 87.8, 203.6], [1378, 620, 118, 204, 74.3, 203.6], [1498, 620, 108, 204, 76.4, 203.6], [1608, 620, 104, 207, 74.8, 206.8]]}};
+for(const[t,m]of Object.entries(TRM)){const img=loadImg('a/npc/'+t+'_trafienia.webp');ZT[t].xa=ZT[t].xa||{};for(const[n,fr]of Object.entries(m))ZT[t].xa[n]={img,m:fr}}
+const HT={};const htSet=(t,ids)=>{for(const i of ids)HT[i]=t};
+htSet('piesc',['piesci','kastet_stalowy','kastet_zloty','rekawice_mma']);
+htSet('obuch_lekki',['mlotek','palka','klucz','klucz_hydrauliczny','patelnia','army_shovel']);
+htSet('obuch_ciezki',['kij','kolczasta','lom','steel_pipe','deska_gwozdzie','kij_hokejowy','kij_hokejowy_podwojny','gasnica']);
+htSet('ciecie',['noz','hunting_knife','machete','siekiera','siekiera_strazacka','tasak','kosa_bojowa']);
+htSet('klucie',['kilof','widly']);htSet('strzal',['pistolet','pistolet_maszynowy','snajperka','snajperka_dwojnog','kusza','proca']);htSet('strzal_ciezki',['strzelba']);
+const xaOk=(z,n)=>{const T=ZT[z.type];return!!(T&&T.xa&&T.xa[n]&&okI(T.xa[n].img))};
+hitZ=(function(_h){return function(z,d,dir,kb,wid){wid=wid||(player&&player.weapon?player.weapon.id:'piesci');const ht=HT[wid]||'obuch_ciezki';
+  _h(z,d,dir,kb);
+  if(z.dead){if(ht==='strzal_ciezki'&&xaOk(z,'death_strzelba'))z.da={n:'death_strzelba',t:0};return}
+  const an='hit_'+(ht==='strzal_ciezki'?'obuch_ciezki':ht);
+  if(!z.rage&&!z.down&&xaOk(z,an)){z.hitA=an;z.hitT=z.hitD=ht==='klucie'?.85:.72;z.stagger=Math.max(z.stagger||0,.42)}else z.hitA=null;
+  if(R()<.45)snd(z.type==='kulejaca'?'kulejaca_jek':z.type==='muffinek'?'muffinek_jek':'zombie_jek',z.x,.45)}})(hitZ);
+function hitFrame(z){const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
+  if(z.hitT>0&&z.hitA&&xaOk(z,z.hitA))return[z.hitA,by(1-z.hitT/(z.hitD||.72),8)];
+  if(z.blind>0&&xaOk(z,'oslepienie'))return['oslepienie',z.blind>.6?by((3-z.blind)/2.4,7):7];return null}
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
@@ -3521,7 +3554,7 @@ if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('700 20
 syncSys();
 setInterval(()=>{if(typeof isTouch!=='undefined')syncTouch()},250);
 let last=performance.now();
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);stepSnd();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);stepSnd();zStepSnd();
   if(mode==='play'||mode==='menu'||mode==='pause'||mode==='inv'||!document.querySelector('.screen:not([hidden])'))render();
   updHud();requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
