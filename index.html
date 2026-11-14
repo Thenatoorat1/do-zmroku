@@ -1030,6 +1030,7 @@ function useItem(it,g){
   it.qty--;if(it.qty<=0){removeIt(g,it);INV.sel=null}
   toast(ID[it.id].n+': '+(u.food>0?'+'+u.food+' sytości ':'')+(u.water>0?'+'+u.water+' nawodnienia ':'')+(u.hp?'+'+u.hp+' zdrowia ':'')+(u.st&&t.stMax?'+'+u.st+' energii':''),1600);
   if(INV.ctx!=='prep'&&t===player&&(u.food||u.st||u.water))t.drinkT=1.3;
+  if(u.food||u.st||u.water)snd((u.water||0)>(u.food||0)||/wod|nap[oó]j|sok|piw|mlek|kaw|herbat|cola|sod|drink/i.test(ID[it.id].n+' '+it.id)?'picie':'jedzenie',null,.7);
   if(INV.ctx==='prep')renderPrepHead();if(INV.ctx==='base')syncChar();
 }
 function findSpot(g,it,x,y,rot,maxR=2){
@@ -1274,7 +1275,8 @@ let ac=null,master,noiseBuf;
 function initAudio(){if(ac)return;try{ac=new(window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=0;setGain();master.connect(ac.destination);
   noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}catch(e){ac=null}}
 function sfx(type,x){
-  if(!ac)return;let vol=1;if(x!=null&&player)vol=clamp(1-Math.abs(x-player.x)/900,0,1);if(vol<.03)return;
+  if(!ac)return;
+  if(!sfx.raw){sfx.raw=1;const R={pick:()=>snd('podniesienie',null,.6),door:()=>doorSnd(null,x,.6),groan:()=>snd('zombie_jek',x,.6),hit:()=>snd(wKind(1)+'_trafienie',x,.8),swing:()=>snd(wKind()+'_zamach',null,.6),kill:()=>snd(wKind(1)+'_trafienie',x,.9)}[type];const done=R&&R();sfx.raw=0;if(done)return}let vol=1;if(x!=null&&player)vol=clamp(1-Math.abs(x-player.x)/900,0,1);if(vol<.03)return;
   const t=ac.currentTime,g=ac.createGain();g.connect(master);
   const env=(a,pk,dec)=>{g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(pk*vol,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+dec)};
   const nz=(f,q,tp)=>{const s=ac.createBufferSource();s.buffer=noiseBuf;const fl=ac.createBiquadFilter();fl.type=tp||'lowpass';fl.frequency.value=f;fl.Q.value=q||1;s.connect(fl);fl.connect(g);s.start(t);s.stop(t+1.4)};
@@ -1291,6 +1293,39 @@ function sfx(type,x){
     case'search':nz(1300,1.5,'bandpass');env(.02,.06,.12);break;
   }
 }
+
+/* ---------- nagrane dźwięki (snd/): efekty i muzyka z Magnific; syntezator powyżej zostaje jako zapas ---------- */
+const SND={buf:{},load:{},last:{},t:{},stepPh:-1,
+  n:{kroki:4,bieg:4,kij_zamach:3,kij_trafienie:3,noz_zamach:3,noz_trafienie:3,lom_zamach:3,lom_trafienie:3,wrecz_zamach:3,wrecz_trafienie:3,
+     zombie_jek:6,zombie_ryk:4,zombie_je:4,drzwi_otwieranie:24,drzwi_wywazanie:3,szafka_przeszukiwanie:3,podniesienie:2,wspinanie:2,upadek:2,
+     jedzenie:3,picie:2,menu_klik:1,puszki_alarm:1}};
+function sndLoad(path){if(!ac||SND.buf[path]||SND.load[path])return;
+  SND.load[path]=fetch('snd/'+path+'.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()})
+    .then(a=>new Promise((ok,no)=>ac.decodeAudioData(a,ok,no))).then(b=>{SND.buf[path]=b}).catch(()=>{setTimeout(()=>{delete SND.load[path]},15000)})}
+function sndPreload(){if(SND.pre)return;SND.pre=true;for(const k in SND.n)for(let i=1;i<=SND.n[k];i++)sndLoad('efekty/'+k+'_'+i)}
+/* zagraj losową wersję efektu (bez powtórki tej samej); x = pozycja źródła w świecie; false = brak nagrania, użyj syntezatora */
+function snd(name,x,vol=1,o={}){
+  if(!ac)return false;const n=SND.n[name];if(!n)return false;
+  let v=vol;if(x!=null&&player)v*=clamp(1-Math.abs(x-player.x)/900,0,1);if(v<.03)return true;
+  let i;if(o.i){i=o.i;if(!SND.buf['efekty/'+name+'_'+i]){sndLoad('efekty/'+name+'_'+i);return false}}
+  else{const ok=[];for(let k=1;k<=n;k++)if(SND.buf['efekty/'+name+'_'+k]&&(n<2||k!==SND.last[name]))ok.push(k);
+    if(!ok.length){sndPreload();return false}i=ok[Math.floor(Math.random()*ok.length)]}
+  SND.last[name]=i;const s=ac.createBufferSource();s.buffer=SND.buf['efekty/'+name+'_'+i];s.playbackRate.value=o.rate||(.95+Math.random()*.1);
+  const g=ac.createGain();g.gain.value=v*.55;s.connect(g);
+  if(x!=null&&player&&ac.createStereoPanner){const pn=ac.createStereoPanner();pn.pan.value=clamp((x-player.x)/700,-.8,.8);g.connect(pn);pn.connect(master)}else g.connect(master);
+  s.start();return true}
+/* rodzaj broni → zestaw dźwięków (kij / nóż / łom / wręcz) */
+function wKind(hit){const w=player&&player.weapon,id=w?w.id:'piesci',d=WP[id]||{};
+  if(id==='siekiera')return hit?'noz':'lom';if(id==='noz')return'noz';if(id==='lom')return'lom';if(d.fists||!w)return'wrecz';return'kij'}
+/* drzwi: każde drzwi mają stały rodzaj dźwięku; przy skradaniu – ciche otwieranie */
+function doorSnd(d,x,v){let grp;if(player&&player.crouch)grp=4;else if(d){if(d.sg==null)d.sg=[0,1,2,3,5][Math.floor(Math.random()*5)];grp=d.sg}else grp=0;
+  return snd('drzwi_otwieranie',x,grp===4?v*1.3:v,{i:grp*4+1+Math.floor(Math.random()*4)})}
+function searchSnd(x){if(!ac)return;if(SND.t.srch&&ac.currentTime<SND.t.srch)return;if(snd('szafka_przeszukiwanie',x,.6))SND.t.srch=ac.currentTime+2.6;else sfx('search',x)}
+/* kroki zgrane z animacją: dwa kroki na cykl 8 klatek */
+function stepSnd(){const p=player;if(!p||!ac||mode!=='play'||!p.moving||p.climb||p.fallJ||p.kill||p.peek){SND.stepPh=-1;return}
+  const fr=Math.floor(p.walkP*(p.run?.64:1.27))%8,ph=fr<4?0:1;if(ph===SND.stepPh)return;const first=SND.stepPh<0;SND.stepPh=ph;if(first)return;
+  const sneak=(p.crA||0)>.5;snd(p.run?'bieg':'kroki',null,p.run?.55:sneak?.16:.34)}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('button,.mloc,[role=tab]');if(t&&!t.closest('#touch'))snd('menu_klik',null,.45,{rate:1})},true);
 
 /* ---------- UI helpers ---------- */
 function toast(html,ms=2600){const el=document.createElement('div');el.className='toast';el.innerHTML=html;$('toasts').appendChild(el);
@@ -1369,7 +1404,7 @@ function emitNoise(x,f,r,kind){
     z.state='investigate';z.tx=x+(R()*50-25);z.tf=f;z.look=3+R()*2;z.sus=Math.max(z.sus,.45);
   }
 }
-function toChase(z){if(z.state!=='chase'&&z.state!=='attack'){sfx('groan',z.x);if(R()<.6)emitNoise(z.x,z.f,150,'zombie')}z.state='chase';z.sus=1;z.lastSeen=0;z.tx=player.x;z.tf=player.f}
+function toChase(z){if(z.state!=='chase'&&z.state!=='attack'){snd('zombie_ryk',z.x,.8)||sfx('groan',z.x);if(R()<.6)emitNoise(z.x,z.f,150,'zombie')}z.state='chase';z.sus=1;z.lastSeen=0;z.tx=player.x;z.tf=player.f}
 
 /* ---------- perception ---------- */
 function canSee(z){
@@ -1396,7 +1431,7 @@ function goTo(z,tx,tf,sp,dt){
   const d=gx-z.x;if(Math.abs(d)<6){z.moving=false;return'arrived'}
   z.face=Math.sign(d);const hit=moveEnt(z,Math.sign(d)*Math.min(Math.abs(d),sp*dt));
   z.moving=true;z.walkP+=dt*sp*.075;
-  if(hit&&hit.door){z.bang+=dt;z.moving=false;if(z.bang>1.7){hit.open=true;z.bang=0;emitNoise(hit.x,hit.f,160,'door');sfx('door',hit.x)}}
+  if(hit&&hit.door){z.bang+=dt;z.moving=false;if(z.bang>1.7){hit.open=true;z.bang=0;emitNoise(hit.x,hit.f,160,'door');snd('drzwi_wywazanie',hit.x,.9)||sfx('door',hit.x)}}
   else if(hit){z.moving=false;return'arrived'}
   else z.bang=0;
   return'moving';
@@ -1408,7 +1443,7 @@ function updZombie(z,dt){
   if(z.wasCalm&&(z.state==='investigate'||z.state==='chase')){z.alertT=.85;z.eating=false;z.wasCalm=false;
     if(z.type==='muffinek'&&z.state==='chase'&&!G.muffWarned&&Math.abs(z.x-player.x)<600){G.muffWarned=true;toast('Muffinek dostrzegł błąd. Twój.',2600)}}
   if(z.stair){updStair(z,dt,.75);return}
-  z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)sfx('groan',z.x)}
+  z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)(z.eating?snd('zombie_je',z.x,.5):snd('zombie_jek',z.x,.6))||sfx('groan',z.x)}
   if(z.stagger>0){z.stagger-=dt;moveEnt(z,z.kb*dt);z.kb*=.88;z.moving=false;return}
   const p=player,vis=canSee(z),dist=Math.abs(p.x-z.x);
   const night=phase()>.6;
@@ -1501,7 +1536,7 @@ const FINISHERS={
   kopniak:{dur:2.02,strikes:[1.24,1.74],update(k,p,dt){
     const z=k.z,f=k.f,[l,r]=closedBounds(p.x,p.f);const cl=x=>clamp(x,l+22,r-22);
     if(k.t<.25)p.x=cl(lerp(k.sx,z.x-f*40,k.t/.25));
-    if(k.t>=.3&&!k.fell){k.fell=true;z.dead=true;z.fallDir=f;z.fall=0;z.state='dead';kills++;k.zx0=z.x;emitNoise(p.x,p.f,45,'kill');sfx('hit',p.x);shake=5;
+    if(k.t>=.3&&!k.fell){k.fell=true;z.dead=true;z.fallDir=f;z.fall=0;z.state='dead';kills++;k.zx0=z.x;emitNoise(p.x,p.f,45,'kill');snd('wrecz_trafienie',p.x,.8)||sfx('hit',p.x);shake=5;
       for(let i=0;i<5;i++)blood(z.x,z.y-110,z.f,f);
       if(zSpr(z)){const T=ZT[z.type],fr=T.meta.a.kick_fall[6];z.da={n:'kick_fall',t:0};k.headX=z.x-f*(fr[4]-14)*T.H/T.meta.H}}
     if(k.fell&&k.t<.7&&!zSpr(z)){const[zl,zr]=closedBounds(k.zx0,z.f);z.x=clamp(k.zx0+f*Math.min(1,(k.t-.3)/.3)*34,zl+20,zr-20)}
@@ -1553,7 +1588,7 @@ function doInteract(i){const p=player;if(p.stair||p.kill||p.atk>0||p.bandage>0||
 function startFall(e,tx,h){e.fallJ={t:0,fx:e.x,fy:e.y,tx,ty:F[0],dur:.3+Math.sqrt(h)/30,h};e.crouch=false;e.hidden=null;e.search=null;e.peek=null}
 function updFall(e,dt){const j=e.fallJ;j.t+=dt;const k=clamp(j.t/j.dur,0,1);e.x=lerp(j.fx,j.tx,Math.min(1,k*1.6));e.y=j.fy+(j.ty-j.fy)*k*k;e.moving=false;e.walkP+=dt*14;
   if(k>=1){e.fallJ=null;e.f=0;e.y=F[0];land(e,j.h)}}
-function land(p,h){const m=h/80;shake=16;sfx('hurt');emitNoise(p.x,0,260,'fall');for(let i=0;i<6;i++)blood(p.x,p.y-20,0,0);
+function land(p,h){const m=h/80;shake=16;snd('upadek',null,.9)||sfx('hurt');emitNoise(p.x,0,260,'fall');for(let i=0;i<6;i++)blood(p.x,p.y-20,0,0);
   if(m>=6){p.hp=0;showState('Upadek z wysokości','Śmierć:');die();return}
   let dmg,spr;if(m>=4){dmg=30;spr=true}else if(R()<.5){dmg=15;spr=true}else{dmg=8;spr=false}
   p.hp-=dmg;p.hurt=.7;flashT=.6;
@@ -1566,7 +1601,7 @@ function startClimb(e,c,dir){
   if(c.kind==='hatch')pts.splice(1,2);
   if(!up&&c.kind!=='hatch'){pts.length=0;pts.push([e.x,e.y],[c.x1,e.y],[c.x0,e.y],[c.x0,F[c.f0]])}
   const segs=[];let tot=0;for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);const v=Math.abs(pts[i][1]-pts[i-1][1])>4;const dur=d/(v?(up?95:140):120);segs.push({a:pts[i-1],b:pts[i],dur,v});tot+=dur}
-  e.climb={segs,i:0,t:0,tf:up?c.f1:c.f0,c,up};e.crouch=false;e.hidden=null;e.search=null;
+  e.climb={segs,i:0,t:0,tf:up?c.f1:c.f0,c,up};if(e===player)snd('wspinanie',e.x,.6);e.crouch=false;e.hidden=null;e.search=null;
   if(c.win&&!c.win.open&&!up){c.win.open=true;sfx('door',e.x)}
   emitNoise(e.x,e.f,c.noise||50,'door');
 }
@@ -1576,7 +1611,7 @@ function updClimb(e,dt){const c=e.climb;let s=c.segs[c.i];if(!s){e.f=c.tf;e.y=F[
   if(k>=1){c.i++;c.t=0;if(c.c.win&&!c.c.win.open&&c.i===c.segs.length-1){c.c.win.open=true;sfx('door',e.x);emitNoise(e.x,1,90,'door')}if(c.i>=c.segs.length){e.f=c.tf;e.y=F[e.f];e.climb=null;e.moving=false}}}
 function toggleDoor(d){
   if(d.open){const occ=[player,...zombies].some(e=>!e.dead&&e.f===d.f&&Math.abs(e.x-d.x)<22);if(occ)return toast('Coś blokuje drzwi')}
-  d.open=!d.open;sfx('door',d.x);emitNoise(d.x,d.f,d.open?80:60,'door');
+  d.open=!d.open;doorSnd(d,d.x,.75)||sfx('door',d.x);emitNoise(d.x,d.f,d.open?80:60,'door');
 }
 function toggleHide(h){
   const p=player;if(p.hidden===h){p.hidden=null;return}
@@ -1617,7 +1652,7 @@ function updPlayer(dt){
   if(p.hidden){if(mv)p.hidden=null;else{p.moving=false;p.st=Math.min(p.stMax,p.st+dt*24*p.regenM);return}}
   if(p.search){
     if(mv){p.search=null;toast('Przerwano przeszukiwanie',1300)}
-    else{const s=p.search;s.t+=dt;s.nt-=dt;if(s.nt<=0){s.nt=.85;emitNoise(p.x,p.f,85*p.searchN,'search');sfx('search',p.x)}
+    else{const s=p.search;s.t+=dt;s.nt-=dt;if(s.nt<=0){s.nt=.85;emitNoise(p.x,p.f,85*p.searchN,'search');searchSnd(p.x)}
       if(s.t>=s.dur){p.search=null;finishSearch(s.c)}p.moving=false;p.st=Math.min(p.stMax,p.st+dt*16*p.regenM);return}
   }
   if(p.atk>0){const before=p.atk;p.atk-=dt;if(!p.atkHit&&before>p.atkDur*.55&&p.atk<=p.atkDur*.55){p.atkHit=true;applyHit()}mv=0}
@@ -1960,7 +1995,7 @@ function genLevel(poi){
   return zs;
 }
 function updTraps(){const p=player;if(!p||p.f!==0||p.crouch)return;
-  for(const t of traps)if(t.on&&Math.abs(p.x-t.x)<26){t.on=false;sfx('door',t.x);sfx('hurt',t.x);emitNoise(t.x,0,650,'combat');showState('Puszki na sznurku!','Hałas:')}}
+  for(const t of traps)if(t.on&&Math.abs(p.x-t.x)<26){t.on=false;snd('puszki_alarm',t.x,1)||(sfx('door',t.x),sfx('hurt',t.x));emitNoise(t.x,0,650,'combat');showState('Puszki na sznurku!','Hałas:')}}
 
 /* ---------- mapa świata ---------- */
 const MN=DZ.map.graph.nodes,MADJ=MN.map(()=>[]);
@@ -2837,9 +2872,23 @@ function mBox(m,t,v){const f=mf(m);const g=ac.createGain();g.connect(MUS.L.box);
   for(const[k,a,dt]of[[1,1,0],[2,.28,9],[3.01,.1,-5],[5.4,.03,0]]){const o=ac.createOscillator();o.type='sine';o.frequency.value=f*k;o.detune.value=dt+(Math.random()*8-4);const og=ac.createGain();og.gain.value=a;o.connect(og);og.connect(g);o.start(t);o.stop(t+2.6)}}
 function mBell(m,t){const f=mf(m);for(const[k,a,d]of[[1,.22,5.5],[2,.12,3.5],[2.76,.1,2.6],[4.07,.06,1.8],[5.4,.04,1.2]]){const o=ac.createOscillator();o.type='sine';o.frequency.value=f*k;const g=ac.createGain();g.connect(MUS.L.bell);mEnv(g,t,.01,a,0,d);o.connect(g);o.start(t);o.stop(t+d+.2)}}
 function mThump(t,v){const o=ac.createOscillator();o.type='sine';o.frequency.setValueAtTime(70,t);o.frequency.exponentialRampToValueAtTime(38,t+.16);const g=ac.createGain();g.connect(MUS.L.pulse);mEnv(g,t,.008,.55*v,0,.22);o.connect(g);o.start(t);o.stop(t+.3)}
+
+/* nagrana muzyka: jeden utwór na nastrój, płynne przejścia, wznowienie od miejsca przerwania; syntezator gra, dopóki plik się nie wczyta */
+const TRK={src:null,g:null,key:'',t0:0,off:0,pos:{}},TRK_VOL=1;
+const TRK_FILE={menu:'menu',base:'kryjowka',day:'dzien',night:'noc',chase:'poscig'};
+function trkTick(md){
+  const key='muzyka/muzyka_'+TRK_FILE[md];if(!SND.buf['muzyka/muzyka_poscig'])sndLoad('muzyka/muzyka_poscig');
+  if(!SND.buf[key]){sndLoad(key);return!!TRK.src}
+  if(TRK.key===key)return true;
+  const now=ac.currentTime,fast=md==='chase'||TRK.key.endsWith('poscig');
+  if(TRK.src){const b=TRK.src.buffer;TRK.pos[TRK.key]=(TRK.off+now-TRK.t0)%b.duration;TRK.g.gain.setTargetAtTime(0,now,fast?.25:1.2);TRK.src.stop(now+(fast?1.6:7))}
+  const s=ac.createBufferSource();s.buffer=SND.buf[key];s.loop=true;const g=ac.createGain();g.gain.value=0;s.connect(g);g.connect(MUS.bus);
+  const off=md==='chase'?0:(TRK.pos[key]||0);s.start(now,off);g.gain.setTargetAtTime(TRK_VOL,now,fast?.3:1.6);
+  Object.assign(TRK,{src:s,g,key,t0:now,off});
+  for(const k in MUS.L)MUS.L[k].gain.setTargetAtTime(0,now,.8);MUS.mood=md;return true}
 function musTick(){
   if(!ac||!MUS.on)return;const now=ac.currentTime;
-  const md=musMood();if(md!==MUS.mood){MUS.mood=md;const M=MOODS[md];for(const k in MUS.L)MUS.L[k].gain.setTargetAtTime(M[k],now,md==='chase'?.35:1.8)}
+  const md=musMood();if(trkTick(md))return;if(md!==MUS.mood){MUS.mood=md;const M=MOODS[md];for(const k in MUS.L)MUS.L[k].gain.setTargetAtTime(M[k],now,md==='chase'?.35:1.8)}
   if(MUS.next<now-1)MUS.next=now+.05;
   const M=MOODS[MUS.mood],bd=60/(MUS.mood==='chase'?84:66);
   while(MUS.next<now+.35){const t=MUS.next,b=MUS.beat;
@@ -2851,8 +2900,8 @@ function musTick(){
     if(MUS.mood==='chase'){mThump(t,1);mThump(t+.19,.6)}else if(MUS.mood==='night'&&b%2===0)mThump(t,.35);
     MUS.next+=bd;MUS.beat++}
 }
-addEventListener('pointerdown',()=>{initAudio();if(ac&&ac.state==='suspended')ac.resume();startMusic()});
-addEventListener('keydown',()=>{initAudio();if(ac&&ac.state==='suspended')ac.resume();startMusic()});
+addEventListener('pointerdown',()=>{initAudio();if(ac&&ac.state==='suspended')ac.resume();startMusic();sndPreload()});
+addEventListener('keydown',()=>{initAudio();if(ac&&ac.state==='suspended')ac.resume();startMusic();sndPreload()});
 
 /* ---------- boot ---------- */
 const isTouch=matchMedia('(pointer:coarse)').matches||('ontouchstart' in window);
@@ -2873,7 +2922,7 @@ if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('700 20
 syncSys();
 setInterval(()=>{if(typeof isTouch!=='undefined')syncTouch()},250);
 let last=performance.now();
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);stepSnd();
   if(mode==='play'||mode==='menu'||mode==='pause'||mode==='inv'||!document.querySelector('.screen:not([hidden])'))render();
   updHud();requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
