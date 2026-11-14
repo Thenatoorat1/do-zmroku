@@ -1890,7 +1890,7 @@ const cSize=id=>{const w=(KP[id]||LPR[id]||{width:200}).width;return w>420?[5,3]
 function kitB(x0,o){
   const n=o.n,fl=o.rooms.length,w=kitW(o.rooms[0],n),r=o.rnd||R;
   const b={kit:true,kind:o.rooms[0],x0,x1:x0+w,floors:fl,rooms:o.rooms,n,tex:o.tex,roof:o.roof,top:RTOP(fl-1),sign:o.sign||null,win:o.win||'window_pvc',ent:o.door||'door_wood',zs:[]};
-  B.push(b);
+  b.door=pickDoor(b,r);B.push(b);
   doors.push({x:x0,f:0,door:true,open:false,b},{x:b.x1,f:0,door:true,open:false,b});
   const occ=[[],[],[]];
   if(fl>1){walls.push({x:x0,f:1},{x:b.x1,f:1});
@@ -1927,7 +1927,7 @@ function drawRoom(rt,x0,n,f){const r=KR[rt],y=RTOP(f),h=316;let x=x0;const lw=r.
   dImg(AI('rooms/'+rt+'_left'),x,y,lw+1,h);x+=lw;for(let i=0;i<n;i++){dImg(AI('rooms/'+rt+'_mid'),x,y,mw+1,h);x+=mw}dImg(AI('rooms/'+rt+'_right'),x,y,rw,h)}
 function drawKitRooms(b){for(let f=0;f<b.floors;f++)drawRoom(b.rooms[f],b.x0,b.n,f);
   drawKitHoles(b);drawKitStair(b);
-  for(const d of doors)if(d.b===b&&d.open)drawOpenDoor(b,d)}
+  for(const d of doors)if(d.b===b&&d.open&&!b.door)drawOpenDoor(b,d)}
 function drawKitRoof(b){const w=b.x1-b.x0,cx=(b.x0+b.x1)/2,t=b.top;
   if(b.roof==='flat')dPart('roof_flat_parapet',cx,t+20,{sx:(w+20)/(KP.roof_flat_parapet.width*AS),sy:.42});
   else if(b.roof==='saw'){const k=(w+20)/(KP.roof_sawtooth.width*AS);dPart('roof_sawtooth',cx,t+14,{sx:k,sy:k*.62})}
@@ -1944,7 +1944,7 @@ function drawKitFacade(b){
     else{const nW=Math.max(1,b.n-(f===0&&b.kind==='garage'?1:0)),a=b.x0+150,z=b.x1-150;
       if(f===0&&b.kind==='garage')dPart('door_garage_roll',b.x0+w*.62,F[0]+16,{k:.9});
       for(let i=0;i<nW;i++){const wx=nW===1?(a+z)/2:lerp(a,z,i/(nW-1));if(f===0&&b.kind==='garage'&&Math.abs(wx-(b.x0+w*.62))<120)continue;dPart(b.win,wx,F[f]-58+FDY,{k:.82})}}}
-  dPart(b.ent,b.x0+50,F[0]+16,{k:.78});dPart(b.ent,b.x1-50,F[0]+16,{k:.78});
+  if(b.door){drawDoorFront(b,b.x0+50);drawDoorFront(b,b.x1-50)}else{dPart(b.ent,b.x0+50,F[0]+16,{k:.78});dPart(b.ent,b.x1-50,F[0]+16,{k:.78})}
   if(b.sign){const sx=(b.x0+b.x1)/2,sy=RTOP(0)+40;c.font='700 22px "Crimson Pro",Georgia,serif';const tw=c.measureText(b.sign).width+36;
     c.fillStyle='#d7cfbb';c.fillRect(sx-tw/2,sy-24,tw,34);c.fillStyle='#8a2a20';c.textAlign='center';c.fillText(b.sign,sx,sy)}
 }
@@ -1952,10 +1952,11 @@ function drawKitFront(b){const c=ctx,w=b.x1-b.x0;c.fillStyle='#0b0b0c';
   c.fillRect(b.x0-12,b.top-4,w+24,10);
   for(let f=1;f<b.floors;f++){const st=b.stair;if(st&&st.D&&st.f1===f){c.fillRect(b.x0-12,F[f]+11+FDY,st.hx0-b.x0+12,8);c.fillRect(st.hx1,F[f]+11+FDY,b.x1-st.hx1+12,8)}else c.fillRect(b.x0-12,F[f]+11+FDY,w+24,8)}
   for(const x of[b.x0,b.x1])for(let f=0;f<b.floors;f++){const y0=RTOP(f),y1=F[f]+17+FDY;
+    if(b.door){if(f>0)drawWallStrip(b,x,f);continue}
     if(f===0){c.fillRect(x-12,y0,24,F[0]-216-y0)}
     else{const wn=wins.find(q=>q.b===b&&q.f===f&&q.x===x);if(wn){c.fillRect(x-12,y0,24,F[f]-188+FDY-y0);c.fillRect(x-12,F[f]-52+FDY,24,y1-F[f]+52-FDY)}else c.fillRect(x-12,y0,24,y1-y0)}}
   for(const wn of wins)if(wn.b===b){c.fillStyle=wn.open?'#121314':'rgba(170,190,196,.72)';c.fillRect(wn.x-7,F[wn.f]-186+FDY,14,134)}
-  for(const d of doors)if(d.b===b)drawDoorFrame(b,d);
+  for(const d of doors)if(d.b===b)(b.door?drawDoorNew(b,d):drawDoorFrame(b,d));
 }
 /* drzwi: zamknięte widać z boku (gruba framuga, klamka z profilu), otwarte uchylone do środka, frontem i pod kątem */
 const DOORCOL={door_wood:['#5a432e','#3b2b1d'],door_steel:['#5d6266','#3a3e41'],door_glass_double:['#41504f','#283131']};
@@ -2599,6 +2600,30 @@ function drawKitSlab(b){if(b.floors<2)return;const c=ctx,st=b.stair,y0=F[1]+10,y
   if(st&&st.D){c.rect(b.x0,y0,st.hx0-b.x0,y1-y0);c.rect(st.hx1,y0,b.x1-st.hx1,y1-y0)}else c.rect(b.x0,y0,b.x1-b.x0,y1-y0);c.clip();
   drawRoom(b.rooms[0],b.x0,b.n,0);drawRoom(b.rooms[1],b.x0,b.n,1);c.fillStyle='rgba(0,0,0,.18)';c.fillRect(b.x0,y0,b.x1-b.x0,y1-y0);c.restore();
   if(st&&st.D)dImg(stairImg(st,'_strop'),st.sl,F[1]+SOFF-STROP_TOP*st.s,st.sw,300*st.s,st.flip)}
+
+/* ================= DRZWI WEJŚCIOWE: słupek ściany z ościeżnicą (warstwa przednia), skrzydło otwarte na zewnątrz ================= */
+/* grafiki 300x760 (dół = podłoga), wejście z prawej strony budynku; dla lewej odbicie. ściana x 0-65, ościeżnica 65-107 */
+const DOORDEF={d01_klasyczne_brazowe:['cegla_tynk',293],d02_niebieskie_naswietle:['cegla_tynk',323],d03_mahon_ornament:['tynk_nowoczesny',323],d04_biale_szprosy:['cegla_tynk',320],
+ d05_prl_listwy:['beton',321],d06_antracyt_frezy:['tynk_nowoczesny',326],d07_grafit_czerwony:['tynk_nowoczesny',338],d08_granat_krata:['tynk_nowoczesny',335],
+ d09_biale_bulaj:['tynk_nowoczesny',333],d10_antracyt_przeszklenia:['tynk_nowoczesny',336],d11_stal_piwnica:['beton',337],d12_stal_przemyslowa:['blacha',317],
+ d13_sklep_spozywczy:['kafle_sklep',342],d14_sklep_kiosk:['kafle_sklep',307]};
+function pickDoor(b,r){const k=b.kind,t=b.tex,pick=a=>'d'+a[Math.floor(r()*a.length)%a.length];let L;
+  if(k==='shop')L=['13_sklep_spozywczy','14_sklep_kiosk'];
+  else if(k==='hall'||k==='garage')L=t==='corrugated'?['12_stal_przemyslowa']:['12_stal_przemyslowa','11_stal_piwnica'];
+  else if(t==='corrugated')L=['12_stal_przemyslowa'];
+  else if(t==='concrete_panel'||t==='concrete_block')L=k==='office'?['05_prl_listwy','11_stal_piwnica','10_antracyt_przeszklenia']:['05_prl_listwy','11_stal_piwnica'];
+  else if(k==='office')L=['06_antracyt_frezy','07_grafit_czerwony','10_antracyt_przeszklenia'];
+  else if(t==='brick'||t==='wood_siding')L=['01_klasyczne_brazowe','02_niebieskie_naswietle','04_biale_szprosy'];
+  else L=['03_mahon_ornament','06_antracyt_frezy','08_granat_krata','09_biale_bulaj','02_niebieskie_naswietle'];
+  return pick(L)}
+const DW=300*AS,DH=760*AS,DJ=86*AS;
+function doorSide(b,x){return x>=(b.x0+b.x1)/2}
+function drawDoorNew(b,d){const R=doorSide(b,d.x),X=R?d.x-DJ:d.x-DW+DJ;dImg(AI('doors/'+b.door+(d.open?'_o':'_c')),X,F[0]+17+FDY-DH,DW,DH,!R)}
+function drawWallStrip(b,x,f){const R=doorSide(b,x),ww=65*AS,X=R?x-DJ:x+DJ-ww,y0=RTOP(f),img=AI('doors/sciana_'+DOORDEF[b.door][0]),c=ctx;
+  const wn=wins.find(q=>q.b===b&&q.f===f&&q.x===x);c.save();c.beginPath();
+  if(wn){c.rect(X-2,y0,ww+4,F[f]-188+FDY-y0);c.rect(X-2,F[f]-52+FDY,ww+4,DH)}else c.rect(X-2,y0,ww+4,DH);c.clip();
+  dImg(img,X,y0,ww,DH,!R);c.restore()}
+function drawDoorFront(b,x){const fw=DOORDEF[b.door][1]*AS,fh=633*AS;dImg(AI('doors/'+b.door+'_front'),x-fw/2,F[0]+FDY+2-fh,fw,fh,false)}
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
