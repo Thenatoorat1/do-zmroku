@@ -1350,20 +1350,10 @@ const SND={buf:{},load:{},last:{},t:{},stepPh:-1,
      muffinek_jek:3,muffinek_rzut:3,muffinka_trafienie:3,oszolomienie:2,muffinek_furia:2,schabowy_wyciaganie:1,schabowy_uderzenie:4,muffinek_przekaska:3,
      patelnia_zamach:3,patelnia_trafienie:3,tasak_zamach:3,tasak_trafienie:3,kilof_zamach:3,kilof_trafienie:3,
      kij_hokejowy_zamach:3,kij_hokejowy_trafienie:3,saperka_zamach:3,saperka_trafienie:3,
-     pistolet_strzal:3,pm_seria:2,snajperka_strzal:2,strzelba_strzal:2,strzelba_pompka:2,bron_pusta:2,luski:3,
-     kusza_strzal:2,belt_trafienie:3,proca_strzal:2,gasnica_psik:2,
-     piesc_trafienie:3,kastet_trafienie:3,deska_trafienie:3,widly_trafienie:3,kula_trafienie_cialo:3,cialo_upadek:3,
-     zombie_kaszel_proszek:3,kulejaca_trafiona:3,muffinek_trafiony:3,kosa_zamach:3}};
-/* broń palna i strzelecka: własny huk, łuski, pompka; seria PM jednym nagraniem */
-const GUNSND={pistolet:'pistolet_strzal',snajperka:'snajperka_strzal',snajperka_dwojnog:'snajperka_strzal',strzelba:'strzelba_strzal',kusza:'kusza_strzal',proca:'proca_strzal'};
-function gunSnd(id,p){if(!ac)return;const now=ac.currentTime;
-  if(id==='pistolet_maszynowy'){if(SND.t.pm&&now<SND.t.pm)return;if(snd('pm_seria',null,.9)){SND.t.pm=now+.5;setTimeout(()=>snd('luski',p.x,.5),550)}else sfx('shot');return}
-  if(!snd(GUNSND[id]||'pistolet_strzal',null,id==='proca'||id==='kusza'?.8:1))sfx('shot');
-  if(id==='strzelba')setTimeout(()=>snd('strzelba_pompka',null,.8),450);else if(id==='pistolet')setTimeout(()=>snd('luski',p.x,.45),350)}
-/* nazwa dźwięku broni białej: najpierw własny, potem zestaw z wKind */
-const HITSND={piesci:'piesc_trafienie',rekawice_mma:'piesc_trafienie',kastet_stalowy:'kastet_trafienie',kastet_zloty:'kastet_trafienie',deska_gwozdzie:'deska_trafienie',widly:'widly_trafienie'},SWSND={kosa_bojowa:'kosa_zamach'};
-function wSnd(hit,x,v){const id=player&&player.weapon?player.weapon.id:'piesci',own=(hit?HITSND:SWSND)[id];
-  return (own&&snd(own,x,v))||snd(wKind(hit?1:0)+(hit?'_trafienie':'_zamach'),x,v)}
+     pistolet_strzal:6,pm_seria:5,snajperka_strzal:4,strzelba_strzal:5,strzelba_pompka:4,bron_pusta:4,luski:6,pistolet_przeladowanie:2,snajperka_zamek:2,
+     kusza_strzal:4,kusza_naciaganie:2,belt_trafienie:5,proca_strzal:4,gasnica_psik:4,
+     piesc_trafienie:6,kastet_trafienie:6,deska_trafienie:5,widly_trafienie:5,kula_trafienie_cialo:6,cialo_upadek:6,
+     zombie_kaszel_proszek:5,kulejaca_trafiona:6,muffinek_trafiony:6,kosa_zamach:5}};
 function sndLoad(path){if(!ac||SND.buf[path]||SND.load[path])return;
   SND.load[path]=fetch('snd/'+path+'.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()})
     .then(a=>new Promise((ok,no)=>ac.decodeAudioData(a,ok,no))).then(b=>{SND.buf[path]=b}).catch(()=>{setTimeout(()=>{delete SND.load[path]},15000)})}
@@ -1380,6 +1370,17 @@ function snd(name,x,vol=1,o={}){
   if(x!=null&&player&&ac.createStereoPanner){const pn=ac.createStereoPanner();pn.pan.value=clamp((x-player.x)/700,-.8,.8);g.connect(pn);pn.connect(master)}else g.connect(master);
   s.start();return true}
 /* rodzaj broni → zestaw dźwięków (kij / nóż / łom / wręcz) */
+/* broń palna i strzelecka: własny huk, łuski, pompka, zamek, naciąganie; seria PM jednym nagraniem */
+const GUNSND={pistolet:'pistolet_strzal',snajperka:'snajperka_strzal',snajperka_dwojnog:'snajperka_strzal',strzelba:'strzelba_strzal',kusza:'kusza_strzal',proca:'proca_strzal'};
+function gunSnd(id,p){if(!ac)return;const now=ac.currentTime;
+  if(id==='pistolet_maszynowy'){if(SND.t.pm&&now<SND.t.pm)return;if(snd('pm_seria',null,.9)){SND.t.pm=now+.5;setTimeout(()=>snd('luski',p.x,.5),550)}else sfx('shot');return}
+  if(!snd(GUNSND[id]||'pistolet_strzal',null,id==='proca'||id==='kusza'?.8:1))sfx('shot');
+  if(id==='strzelba')setTimeout(()=>snd('strzelba_pompka',null,.8),450);else if(id==='pistolet')setTimeout(()=>snd('luski',p.x,.45),350);
+  else if(id==='snajperka'||id==='snajperka_dwojnog')setTimeout(()=>snd('snajperka_zamek',null,.75),600);else if(id==='kusza')setTimeout(()=>snd('kusza_naciaganie',null,.7),450)}
+/* nazwa dźwięku broni białej: najpierw własny, potem zestaw z wKind */
+const HITSND={piesci:'piesc_trafienie',rekawice_mma:'piesc_trafienie',kastet_stalowy:'kastet_trafienie',kastet_zloty:'kastet_trafienie',deska_gwozdzie:'deska_trafienie',widly:'widly_trafienie'},SWSND={kosa_bojowa:'kosa_zamach'};
+function wSnd(hit,x,v){const id=player&&player.weapon?player.weapon.id:'piesci',own=(hit?HITSND:SWSND)[id];
+  return (own&&snd(own,x,v))||snd(wKind(hit?1:0)+(hit?'_trafienie':'_zamach'),x,v)}
 const WKIND={noz:'noz',hunting_knife:'noz',lom:'lom',steel_pipe:'lom',patelnia:'patelnia',tasak:'tasak',machete:'tasak',maczeta:'tasak',saperka:'saperka',kilof:'kilof',kij_hokejowy:'kij_hokejowy',army_shovel:'saperka'};
 function wKind(hit){const w=player&&player.weapon,id=w?w.id:'piesci',d=WP[id]||{};
   if(id==='siekiera')return hit?'tasak':'lom';if(WKIND[id])return WKIND[id];if(d.fists||!w)return'wrecz';return'kij'}
@@ -2835,6 +2836,8 @@ function fireGun(w){const p=player;if(!gCount(p.bag,w.ammo)){snd('bron_pusta',nu
   p.hidden=null;p.search=null;let d=w.atkD;if(p.weapon.id==='snajperka_dwojnog'&&p.crouch)d*=.55;if(p.weapon.id==='pistolet'&&time-(p.lastShot||-9)<.6&&!p.dbl){d=.14;p.dbl=true}else p.dbl=false;p.lastShot=time;
   p.atk=d;p.atkDur=d;p.atkHit=true;
   if(w.burst){p.burst={n:w.burst,t:0,w}}else shootOnce(w);
+  const id=p.weapon.id,MAG={pistolet:15,pistolet_maszynowy:32}[id];if(MAG){p.mag=p.mag||{};p.mag[id]=(p.mag[id]||0)+(w.burst||1);
+    if(p.mag[id]>=MAG&&gCount(p.bag,w.ammo)>(w.burst||1)){p.mag[id]=0;setTimeout(()=>snd('pistolet_przeladowanie',null,.8),w.burst?450:150);p.atk=p.atkDur=d+1;if(!(G.wTip||{}).mag){G.wTip=G.wTip||{};G.wTip.mag=1;toast('Przeładowanie',1200)}}}
   if(!gCount(p.bag,w.ammo))toast('Ostatni nabój')}
 function useExt(w){const p=player,cw=p.weapon;p.hidden=null;p.atk=w.atkD;p.atkDur=w.atkD;p.atkHit=true;
   if(cw.dur>0){cw.dur--;snd('gasnica_psik',null,.8)||sfx('swing');emitNoise(p.x,p.f,w.noise,'combat');
