@@ -200,7 +200,22 @@ body.touch .keys{display:none}
 .ask{position:fixed;inset:0;display:grid;place-items:center;background:rgba(8,8,7,.58);z-index:80;padding:16px}
 .askbox{background:#171715;border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.6);padding:22px 24px;max-width:min(460px,100%)}
 .askbox h3{font:700 26px/1.15 "Crimson Pro",Georgia,serif;margin:4px 0 8px}.askbox p{margin:0 0 16px;color:#cfc6b4;font:500 16px/1.4 var(--ui)}
-.askbox .btns{display:flex;gap:10px;flex-wrap:wrap}.askbox small{display:block;margin-top:12px;color:#7d776b;font:500 12.5px var(--ui)}
+.askbox .btns{display:flex;gap:10px;flex-wrap:wrap}
+.gclick{cursor:pointer;transition:border-color .15s}.gclick:hover,.gclick:focus-visible{border-color:var(--amber);outline:none}
+.gmore{display:inline-block;margin-top:6px;font:700 13px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+.gcard{position:fixed;inset:0;z-index:90;background:rgba(6,6,5,.82);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.gcbox{position:relative;background:#151513;border:1px solid var(--line);box-shadow:0 24px 70px rgba(0,0,0,.7);max-width:1080px;width:100%;padding:22px 24px;margin:auto 0}
+.gcx{position:absolute;right:14px;top:14px}
+.gchead{display:flex;gap:16px;align-items:center;margin:0 0 16px;padding-right:110px}
+.gcport{width:96px;height:96px;object-fit:cover;border:2px solid var(--amber);flex:none}
+.gchead h2{margin:.1em 0 0}
+.gcgrid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:22px;align-items:start}
+.gcviews{display:flex;gap:10px;justify-content:center;background:radial-gradient(ellipse at 50% 85%,rgba(214,162,58,.08),transparent 70%),#0e0e0d;border:1px solid var(--line);padding:14px 10px 8px}
+.gcviews figure{margin:0;flex:1;min-width:0;text-align:center}.gcviews img{height:min(52vh,430px);max-width:100%;object-fit:contain;display:block;margin:0 auto}
+.gcviews figcaption{font:600 12px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.gctext p{font:500 16px/1.5 var(--ui);color:#d8d0bf;margin:0 0 12px;max-width:62ch}
+.gctext .kv{margin-top:14px}
+@media (max-width:760px),(max-height:520px){.gcgrid{grid-template-columns:1fr}.gcviews img{height:min(42vh,300px)}.gchead{padding-right:0;flex-wrap:wrap}.gcx{position:static;margin:0 0 10px}}.askbox small{display:block;margin-top:12px;color:#7d776b;font:500 12.5px var(--ui)}
 .mloc{cursor:pointer}
 .mloc:focus{outline:none}
 .mloc:focus-visible circle.ring{stroke:var(--amber)}
@@ -491,6 +506,7 @@ body.touch .hide-touch{display:none}
     </div>
   </div>
 
+  <div id="gcard" class="gcard" hidden role="dialog" aria-modal="true" aria-labelledby="gcTitle"><div class="gcbox"><button class="btn ghost sm gcx" id="gcClose">Zamknij</button><div id="gcBody"></div></div></div>
   <div id="trade" class="screen" hidden>
     <div class="wrap">
       <div class="topbar">
@@ -1908,7 +1924,7 @@ function kitB(x0,o){
 function drawRoom(rt,x0,n,f){const r=KR[rt],y=RTOP(f),h=316;let x=x0;const lw=r.leftW*AS,mw=r.midW*AS,rw=r.rightW*AS;
   dImg(AI('rooms/'+rt+'_left'),x,y,lw+1,h);x+=lw;for(let i=0;i<n;i++){dImg(AI('rooms/'+rt+'_mid'),x,y,mw+1,h);x+=mw}dImg(AI('rooms/'+rt+'_right'),x,y,rw,h)}
 function drawKitRooms(b){for(let f=0;f<b.floors;f++)drawRoom(b.rooms[f],b.x0,b.n,f);
-  const st=b.stair;if(st){const hS=(F[0]+8-F[1])/.651;dImg(AI('parts/stairs_wood_up_right'),st.sl,F[0]+8+FDY-hS,st.sw,hS,st.flip)}
+  drawKitHoles(b);const st=b.stair;if(st){const hS=(F[0]+8-F[1])/.651;dImg(AI('parts/stairs_wood_up_right'),st.sl,F[0]+8+FDY-hS,st.sw,hS,st.flip)}
   for(const d of doors)if(d.b===b&&d.open)drawOpenDoor(b,d)}
 function drawKitRoof(b){const w=b.x1-b.x0,cx=(b.x0+b.x1)/2,t=b.top;
   if(b.roof==='flat')dPart('roof_flat_parapet',cx,t+20,{sx:(w+20)/(KP.roof_flat_parapet.width*AS),sy:.42});
@@ -2355,7 +2371,7 @@ function mkPoolChar(t){const C=CSTAT[t.id]||{p:'Ocalały',s:[3,3,3,3,2],t:['oko'
     traits:C.t.map(id=>ALLTR().find(x=>x.id===id)).filter(Boolean),weapon:{id:wid,dur:WP[wid].dur},look:{hair:'short'},portrait:'a/comp/'+t.id+'_p.webp',
     bio:t.bio,story:`<p>Mówią na nią/niego „${t.pseudonim}”. ${t.bio}</p><p>Wzrost ${t.wzrostCm} cm. Na start ma ${WP[wid].n.toLowerCase()}.</p>`,heightCm:t.wzrostCm,
     pal:mkPal({shirt:'#4a4a44',pants:'#2e3644',skin:'#d8a888',hair:'#2a1e16'}),alive:true,wound:false,raids:0};
-  if(!ch.fem)ch.story=ch.story.replace('nią/niego','niego');else ch.story=ch.story.replace('nią/niego','nią');
+  if(!ch.fem)ch.story=ch.story.replace('nią/niego','niego');else ch.story=ch.story.replace('nią/niego','nią');if(typeof STORY!=='undefined'&&STORY[t.id])ch.story=STORY[t.id];
   ch.hpMax=70+st.zdr*10;ch.hp=ch.hpMax;ch.hunger=80;ch.thirst=80;ch.rest=85;ch.sprain=false;return ch}
 function genChar(){const used=new Set([...(G&&G.cands?G.cands:[]),...(G&&G.chars?G.chars:[])].filter(Boolean).map(c=>c.cid));
   const pool=CPOOL.filter(t=>!used.has(t.id));return mkPoolChar(pick(pool.length?pool:CPOOL))}
@@ -2428,6 +2444,66 @@ function updEdges(){const p=player;if(!p||p.f!==0||p.dead||p.climb||p.stair||p.h
   if((L&&!LVX.exitL)||(Rr&&!LVX.exitR)){toast('Tędy nie przejdziesz. Wyjście jest po drugiej stronie.');return}
   const tr=G.raid&&G.raid.loc?G.raid.loc.travel:30;
   askDlg('Opuścić to miejsce?',`Wracasz do kryjówki. Droga zajmie ok. ${fmtDur(tr)}, będziesz na miejscu ok. ${fmtClock(clock+tr)}.`,'Wracam do bazy','Zostaję',()=>endRaid(true))}
+
+/* ================= HISTORIE POSTACI, KARTA W GLOSARIUSZU, PRZESŁONY ŚCIAN I STROPÓW ================= */
+CNPC.bio='Szymon Kupiec, żyd z Krakowa, z Kazimierza. Nikt nie wie, czemu osiadł w Nowym Sączu. Jeździ czarnym sedanem pełnym towaru i handluje wszystkim.';
+const STORY={
+c01:`<p>Tomasz przez dziesięć lat pisał programy dla banku z Biegonic, z domu, w kapciach. Kiedy przyszła Gorączka, pierwszy zauważył, że w sieci znikają kolejne miasta, i zdążył wyjechać z Nowego Sącza, zanim wojsko zamknęło wylotówki. Wrócił po tygodniu, bo w lesie nie było zasięgu, a on nie umie żyć bez informacji.</p><p>Mówi mało, myśli szybko. Na wszystkim robi notatki ołówkiem w zeszycie w kratkę: gdzie były zombie, które drzwi skrzypią, ile kroków do najbliższej rynny. Okulary skleja taśmą już trzeci raz i powtarza, że czwarty raz nie będzie potrzebny.</p><p>Szuka siostry, która pracowała w szpitalu na Młyńskiej. Do szpitala nie wchodzi. Jeszcze.</p>`,
+c02:`<p>Lina prowadziła zajęcia na siłowni na Barskiem: rano dla emerytów, wieczorem dla ochroniarzy. Jej rodzice prowadzili bar z wietnamskim jedzeniem przy dworcu i to ona nauczyła się od nich, że nikt nie będzie czekał, aż będziesz gotowa.</p><p>Gdy blokowisko opanowały zombie, wyprowadziła z klatki dziewięć osób, trzymając w rękach kawałek rury od drążka. Rura została. Ludzie rozeszli się po okolicy i nie wszyscy przetrwali.</p><p>Jest szybka, wytrzymała i niecierpliwa. Przeszukując szafki, robi więcej hałasu niż trzeba, bo chce mieć to już za sobą.</p>`,
+c03:`<p>Marek przez dwadzieścia lat był prezesem firmy transportowej spod miasta. Miał kierowcę, gabinet z widokiem na Dunajec i krawat na każdy dzień tygodnia. Teraz ma jeden krawat, który nosi z przyzwyczajenia, i nóż myśliwski, który dostał kiedyś od wspólnika na urodziny.</p><p>Nauczył się więcej przez ostatni miesiąc niż przez całe dorosłe życie: jak zszyć plecak, jak rozpalić ogień z mokrego drewna, jak przeszukać mieszkanie w dwie minuty. Ręce ma szybkie, płuca gorsze, bo przez lata palił cygara.</p><p>Nie mówi o rodzinie. Na wyświetlaczu rozbitego telefonu wciąż ma zdjęcie dwóch dziewczynek.</p>`,
+c04:`<p>Ewa uczyła biologii w liceum i w każde wakacje prowadziła uczniów po Beskidzie Sądeckim. Zna każdą ścieżkę od Przehyby po Jaworzynę i wie, które grzyby jeść, a od których trzymać się z daleka.</p><p>Kiedy zaczęło się w mieście, była z grupą młodzieży w schronisku. Sprowadziła ich na dół lasem, bez dróg, w trzy dni. Wszyscy wrócili do domów. Ewa potem sama obeszła wszystkie te domy, żeby sprawdzić.</p><p>Chodzi cicho, oddycha równo i nigdy się nie spieszy. Patelnię nosi, bo ciężka, a zombie rzadko spodziewają się patelni.</p>`,
+c05:`<p>Kamil przez sześć lat stał za barem w piwnicznym pubie przy Rynku, od dziesiątej wieczorem do szóstej rano. Wzrok przyzwyczaił się do półmroku tak bardzo, że teraz w nocy widzi więcej niż inni w dzień.</p><p>Tamtej nocy, gdy na Rynku zaczęło się zamieszanie, zamknął pub od środka i przez dwa tygodnie wychodził tylko po zmroku. Nauczył się przemykać między kamienicami jak cień, stąd ksywka.</p><p>Tasak zabrał z kuchni pubu. Mówi, że kucharz by się nie obraził.</p>`,
+c06:`<p>Pani Halina z Wólek ma sześćdziesiąt lat, trójkę dorosłych dzieci rozsianych po świecie i ogródek, w którym do końca rosły najlepsze pomidory na osiedlu. Wszyscy mówią do niej „ciociu” i nikt nie śmie odmówić jej pierogów.</p><p>Kiedy sąsiedzi uciekali, ona została, bo ktoś musiał karmić koty. Siekiery używała dotąd do rąbania drewna na wędzarnię. Teraz rąbie nią też inne rzeczy i robi to zaskakująco sprawnie.</p><p>Ma oko do szczegółów i astmę, z którą walczy od lat. Zbiera dla wnuków rysunki znalezione w opuszczonych domach. Wierzy, że kiedyś im je pokaże.</p>`,
+c07:`<p>Paweł prowadził warsztat na Zawadzie. Naprawi wszystko, co ma silnik, i rozkręci wszystko, co go nie ma. Zna każdy samochód w okolicy po dźwięku rozrusznika.</p><p>Gdy przyszła Gorączka, zamknął się w warsztacie z żoną i psem. Po dwóch tygodniach została mu tylko torba z narzędziami i klucz francuski. O resztę nie pytajcie.</p><p>Ma szybkie ręce i spokojną głowę. W kryjówce pierwszy siada do stołu warsztatowego, ostatni od niego wstaje.</p>`,
+c08:`<p>Natalia uczyła akrobatyki w szkole cyrkowej i dorabiała jako alpinistka przemysłowa, myjąc szyby biurowców. Wejdzie tam, gdzie nikt inny nie wejdzie: po rynnie, po gzymsie, po linie z prześcieradeł.</p><p>Pierwszy miesiąc przeżyła na dachach Starego Miasta, przeskakując z kamienicy na kamienicę. Na dole były zombie, na górze była cisza.</p><p>Jest cicha i zwinna. Saperkę wzięła ze składu harcerskiego. Mówi niewiele, ale zawsze wie, gdzie jest najbliższe wyjście.</p>`,
+c09:`<p>Kasia prowadziła szkółkę roślin w Chełmcu. Zna się na nasionach, kompoście i szczepieniu jabłoni, a od niedawna także na tym, jak przeżyć tydzień na samych korzonkach i pokrzywach.</p><p>Uśmiecha się nawet wtedy, kiedy nie ma do czego. Inni na początku brali to za naiwność. Teraz wiedzą, że to po prostu upór.</p><p>Młotek ciesielski nosi od czasów budowy szklarni. Ma twardą skórę, w obu znaczeniach. Marzy o tym, żeby kiedyś znowu posadzić coś, co nie będzie musiało przetrwać zimy w piwnicy.</p>`,
+c10:`<p>Julia studiowała grafikę na ASP w Krakowie i wróciła do domu rodziców w Nowym Sączu tydzień przed wybuchem. Na początku rysowała wszystko, co widziała: puste ulice, zabite okna, pierwsze zombie. Potem przestała, bo zabrakło papieru.</p><p>Zimna krew, ciepłe serce. W najgorszej chwili potrafi stać bez ruchu tak długo, że zombie tracą zainteresowanie. Pałkę teleskopową znalazła w radiowozie pod dworcem.</p><p>Jej rodzice zostali w mieszkaniu na trzecim piętrze. Julia nie mówi, co się z nimi stało, ale wciąż nosi klucze do tamtych drzwi.</p>`,
+c11:`<p>Robert przez trzydzieści sezonów uczył jeździć na nartach w Krynicy, latem prowadził spływy Dunajcem. Twardy, opalony i zawsze w goglach, nawet w lipcu. Nikt nie pamięta, kiedy ostatnio widział jego oczy.</p><p>Gorączka zastała go na stoku. Zjechał do miasta na nartach po zamkniętej drodze, a dalej szedł piechotą przez trzy dni. Kilof wziął z magazynu stacji narciarskiej.</p><p>Jest silny i ma dobrą kondycję, ale chodzi ciężko i głośno, jak ktoś, kto całe życie nosił buty narciarskie.</p>`,
+c12:`<p>Agnieszka jeździła w karetce, dwanaście godzin na dobę, przez osiem lat. Zszyje ranę przy świetle zapalniczki i założy opatrunek w biegu. Widziała pierwszych zarażonych, zanim ktokolwiek wiedział, czym są.</p><p>Jej karetka została na rondzie przy Węgierskiej. Maczetę dostała od leśnika, którego opatrzyła w drodze na Biczyce. Nie wróciła do bazy pogotowia, bo nie było już do czego wracać.</p><p>Ma szybkie ręce i spokojny głos. W kryjówce pilnuje, żeby nikt nie chodził z niezabandażowaną raną.</p>`,
+c13:`<p>Beata prowadziła salon kosmetyczny w galerii Trzy Korony, a w weekendy grała w hokeja w drużynie amatorskiej na lodowisku przy Nawojowskiej. Od dziecka na łyżwach, od dziecka z kijem w ręku. To widać.</p><p>Kiedy w galerii wybuchła panika, wyprowadziła ludzi przez wyjście ewakuacyjne, torując drogę kijem hokejowym. Zostało jej po tym trochę szkła w kolanie i dużo pewności siebie.</p><p>Jest szybka i zręczna, ale niecierpliwa: przeszukując szafki, robi więcej hałasu, niż powinna.</p>`,
+c14:`<p>Weronika prowadziła zajęcia crossfitu w piwnicy przy Lwowskiej. Ma tatuaże na obu rękach, każdy z jakąś historią, i zero cierpliwości do zombie, do głupich pytań i do ludzi, którzy się poddają.</p><p>Pierwszego zombie zatrzymała sztangą. Potem przerzuciła się na kij bejsbolowy, bo poręczniejszy. Ma twardą skórę i nie boi się bólu, ale rany goją się u niej wolno.</p><p>Szuka brata, który pracował w Centrum logistycznym. Ostatni SMS od niego brzmiał: „zostańcie w domu”.</p>`,
+c15:`<p>Sandra jeździła ciężarówką od Gorlic po Nowy Targ i zna każdą drogę, każdy objazd i każdy przydrożny bar w promieniu stu kilometrów. Mapy w głowie ma więcej niż ktokolwiek inny w Sączu.</p><p>Gdy zamknięto drogi, stała w korku na obwodnicy z naczepą pełną konserw. Część rozdała ludziom w autach, część schowała w lesie. Gdzie dokładnie, wie tylko ona.</p><p>Ma dobre oko i spokojne ręce. Kij bejsbolowy wozi od lat za fotelem kierowcy, na wszelki wypadek. Wypadek się zdarzył.</p>`,
+npc_handlarz:`<p>Szymon Kupiec, 32 lata, żyd z Krakowa, z Kazimierza. Jego dziadek miał antykwariat przy Szerokiej, ojciec sklep z zegarami przy Józefa. Szymon miał przejąć interes, ale pewnego dnia spakował się do czarnego sedana i pojechał do Nowego Sącza. Dlaczego akurat tam, nie mówi nikomu. Kto pyta, dostaje uśmiech i zmianę tematu.</p><p>Od początku Gorączki jeździ po okolicy z bagażnikiem i dachem pełnymi towaru. Kupuje i sprzedaje wszystko: konserwy, bandaże, siekiery, baterie. Nikt nie wie, skąd to bierze. Mówią na niego „Komis”.</p><p>Każdego dnia stoi gdzie indziej. Zombie jakoś omijają jego auto szerokim łukiem. Ludzie mówią, że ma szczęście. On mówi, że ma dobre wyczucie miejsca.</p>`};
+const VIEWS=[['front','Przód'],['side','Bok'],['back','Tył']];
+function gCardHTML(key){
+  if(key==='main'){const m=G&&G.main?G.main:makeMain();let side='';
+    try{const L=SPR.meta.a.walk[0],c0=document.createElement('canvas');c0.width=L[2];c0.height=L[3];c0.getContext('2d').drawImage(SPR.img,L[0],L[1],L[2],L[3],0,0,L[2],L[3]);side=c0.toDataURL()}catch(e){}
+    return{name:m.name,sub:'Postać główna · '+m.prof+', '+m.age+' lat',portrait:m.portrait,views:side?[[side,'Bok']]:[],story:m.story,ch:m}}
+  if(key==='npc_handlarz')return{name:'Szymon „Komis” Kupiec',sub:'Wędrowny handlarz · 32 lata',portrait:'a/comp/npc_handlarz_p.webp',views:VIEWS.map(([v,n])=>['a/comp/npc_handlarz_'+v+'.webp',n]),story:STORY.npc_handlarz,
+    extra:'<span>Gdzie</span><span>codziennie inna lokacja, widać go na mapie przy aucie</span><span>Handel</span><span>kupuje i sprzedaje wszystko oprócz pamiątek</span>'};
+  const t=CPOOL.find(x=>x.id===key),c=mkPoolChar(t);CID--;
+  return{name:c.name,sub:'Towarzysz · '+c.prof+', '+c.age+' lat · '+t.wzrostCm+' cm',portrait:c.portrait,views:VIEWS.map(([v,n])=>['a/comp/'+key+'_'+v+'.webp',n]),story:STORY[key]||`<p>${c.bio}</p>`,ch:c}}
+function openGCard(key){const d=gCardHTML(key),ch=d.ch;
+  const kv=ch?STATS.map(([k,n])=>`<span>${n}</span><span>${statPips(ch.stats[k])}</span>`).join('')+`<span>Cechy</span><span>${ch.traits.map(t=>t.n+': '+t.d.toLowerCase()).join('; ')}</span><span>Broń</span><span>${WP[ch.weapon.id].n}</span><span>Zdrowie</span><span>${ch.hpMax}</span>`:d.extra;
+  $('gcBody').innerHTML=`<div class="gchead"><img class="gcport" src="${d.portrait}" alt=""><div style="min-width:0"><div class="eyebrow">${d.sub}</div><h2 id="gcTitle">${esc(d.name)}</h2></div></div>
+    <div class="gcgrid"><div class="gcviews">${d.views.map(([src,n])=>`<figure><img src="${src}" alt="${n}"><figcaption>${n}</figcaption></figure>`).join('')}</div>
+    <div class="gctext">${d.story}<div class="kv">${kv}</div></div></div>`;
+  $('gcard').hidden=false;$('gcClose').focus()}
+function closeGCard(){$('gcard').hidden=true}
+$('gcClose').onclick=closeGCard;$('gcard').addEventListener('click',e=>{if(e.target.id==='gcard')closeGCard()});
+addEventListener('keydown',e=>{if(!$('gcard').hidden&&e.code==='Escape'){e.preventDefault();e.stopImmediatePropagation();closeGCard()}},true);
+function glossComp(){let h='';
+  for(const t of CPOOL){const c=mkPoolChar(t);CID--;
+    h+=`<div class="ge gclick" tabindex="0" role="button" data-gc="${t.id}"><div class="gi"><img src="${c.portrait}" alt=""></div><div><b class="gn">${esc(c.name)}</b><div class="gs">Towarzysz · ${c.prof}, ${c.age} lat</div><p>${c.bio}</p><span class="gmore">Karta postaci ›</span></div></div>`}
+  h+=`<div class="ge gclick" tabindex="0" role="button" data-gc="npc_handlarz"><div class="gi"><img src="a/comp/npc_handlarz_p.webp" alt=""></div><div><b class="gn">Szymon „Komis” Kupiec</b><div class="gs">Wędrowny handlarz</div><p>${CNPC.bio}</p><span class="gmore">Karta postaci ›</span></div></div>`;
+  return h}
+function bindGClicks(){for(const el of $('glList').querySelectorAll('[data-gc]')){el.onclick=()=>openGCard(el.dataset.gc);el.onkeydown=e=>{if(e.code==='Enter'||e.code==='Space'){e.preventDefault();openGCard(el.dataset.gc)}}}}
+
+/* przesłony: ściany zewnętrzne i stropy kryjówki rysowane przed postaciami */
+function drawBaseFront(b){const img=AI('bases/'+b.def.id);if(!okI(img))return;const d=b.def,P=DZ.P,c=ctx;
+  const blit=(ax0,ay0,ax1,ay1)=>{c.drawImage(img,ax0*P,ay0*P,(ax1-ax0)*P,(ay1-ay0)*P,b.ox+ax0*AS,b.imgTop+ay0*AS,(ax1-ax0)*AS,(ay1-ay0)*AS)};
+  const fys=[...new Set(d.rooms.filter(r=>r.kind!=='outdoor').map(r=>r.floorY))],top=Math.min(...fys)-780,bot=Math.max(...fys)+150;
+  const x0=Math.min(...d.rooms.map(r=>r.x0)),x1=Math.max(...d.rooms.map(r=>r.x1));
+  blit(Math.max(0,x0-80),top,x0+6,bot);blit(x1-6,top,Math.min(d.width,x1+80),bot);
+  const divs=new Set();for(const r of d.rooms)for(const q of d.rooms)if(r!==q&&r.floorY===q.floorY&&q.x0>r.x1&&q.x0-r.x1<140)divs.add(r.x1+'_'+q.x0);
+  for(const k of divs){const[a,z]=k.split('_').map(Number);blit(a-4,top,z+4,bot)}
+  for(const fy of fys)if(fys.some(y=>y>fy+300))blit(x0-6,fy+20,x1+6,fy+150)}
+/* budynki z modułów: otwór w stropie przy schodach i strop rysowany przed postacią */
+function drawKitHoles(b){const st=b.stair;if(!st)return;const c=ctx,f=st.flip,X=t=>st.sl+st.sw*(f?1-t:t),ya=RTOP(0)+6,yb=RTOP(0)+56;
+  c.fillStyle='#0d0c0b';c.beginPath();c.moveTo(X(.42),yb);c.lineTo(X(.98),yb);c.lineTo(X(.92),ya);c.lineTo(X(.48),ya);c.closePath();c.fill();
+  c.beginPath();c.moveTo(X(.40),F[1]+FDY+8);c.lineTo(X(.98),F[1]+FDY+8);c.lineTo(X(.93),F[1]-30);c.lineTo(X(.46),F[1]-30);c.closePath();c.fill()}
+function drawKitSlab(b){if(b.floors<2)return;const c=ctx,y0=F[1]+10,y1=RTOP(0)+52;c.save();c.beginPath();c.rect(b.x0,y0,b.x1-b.x0,y1-y0);c.clip();
+  drawRoom(b.rooms[0],b.x0,b.n,0);drawRoom(b.rooms[1],b.x0,b.n,1);c.fillStyle='rgba(0,0,0,.18)';c.fillRect(b.x0,y0,b.x1-b.x0,y1-y0);c.restore()}
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
@@ -2784,7 +2860,7 @@ function drawFacade(b){
 function drawBuildingsFront(){
   const c=ctx;
   for(const b of B){if(b.x1<camX-60||b.x0>camX+viewW+60)continue;const w=b.x1-b.x0;
-    if(b.base)continue;if(b.kit){drawKitFront(b);continue}
+    if(b.base){drawBaseFront(b);continue}if(b.kit){if(b.revealed||(player&&player.peek&&player.peek.b===b))drawKitSlab(b);drawKitFront(b);continue}
     c.fillStyle='#0a0a0b';c.fillRect(b.x0-14,b.top,w+28,24);
     c.fillStyle='rgba(235,227,210,.12)';c.fillRect(b.x0-14,b.top,w+28,2);
     if(b.floors===2){c.fillStyle=b.stripe[0];c.fillRect(b.x0-14,b.top+6,w+28,4);c.fillStyle=b.stripe[1];c.fillRect(b.x0-14,b.top+12,w+28,4);
@@ -3003,7 +3079,7 @@ function renderGloss(tab){
   let h='';
   if(tab==='postaci'){
     const m=G&&G.main?G.main:makeMain();
-    h+=`<div class="ge wide"><div class="gi"><img src="${m.portrait}" alt=""></div><div><b class="gn">${esc(m.name)}</b><div class="gs">Postać główna · ${m.prof}</div><p>${m.bio}</p>${m.story}
+    h+=`<div class="ge wide gclick" tabindex="0" role="button" data-gc="main"><div class="gi"><img src="${m.portrait}" alt=""></div><div><b class="gn">${esc(m.name)}</b><div class="gs">Postać główna · ${m.prof}</div><p>${m.bio}</p>${m.story}
       <div class="kv">${STATS.map(([k,n])=>`<span>${n}</span><span>${m.stats[k]} / 5</span>`).join('')}<span>Cecha</span><span>${m.traits.map(t=>t.n+': '+t.d).join(', ')}</span><span>Broń</span><span>${WP[m.weapon.id].n}</span></div></div></div>`;
     h+=glossComp();
   }else if(tab==='zombie'){
@@ -3024,7 +3100,7 @@ function renderGloss(tab){
       if(d.stack)kv+=`<span>Stos</span><span>do ${d.stack}</span>`;
       h+=`<div class="ge gitem"><div class="gi"><img src="${iconURL(id,0)}" alt=""></div><div><b class="gn">${d.n}</b><div class="gs">${c} · ${d.w}×${d.h} pól</div><p>${d.d}</p>${kv?`<div class="kv">${kv}</div>`:''}</div></div>`}
   }
-  $('glList').innerHTML=h;
+  $('glList').innerHTML=h;bindGClicks();
 }
 
 /* ================= MUZYKA: gotycki ambient, generowany na żywo ================= */
