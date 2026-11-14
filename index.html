@@ -759,6 +759,7 @@ const ZT={
 for(const t of Object.values(ZT)){t.img=new Image();t.img.onload=()=>{t.ok=true};t.img.src=t.src}
 function pickZType(){let r=R();for(const[k,t]of Object.entries(ZT)){if((r-=t.w)<0)return k}return'lazega'}
 function zFrame(z){
+  if(z.down)return downFrame(z);
   if(z.lunge)return lungeFrame(z);
   if(z.type==='muffinek'){const mf=muffFrame(z);if(mf)return mf}
   const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
@@ -1343,11 +1344,7 @@ function sfx(type,x){
 const SND={buf:{},load:{},last:{},t:{},stepPh:-1,
   n:{kroki:4,bieg:4,kij_zamach:3,kij_trafienie:3,noz_zamach:3,noz_trafienie:3,lom_zamach:3,lom_trafienie:3,wrecz_zamach:3,wrecz_trafienie:3,
      zombie_jek:6,zombie_ryk:4,zombie_je:4,drzwi_otwieranie:24,drzwi_wywazanie:3,szafka_przeszukiwanie:3,podniesienie:2,wspinanie:2,upadek:2,
-     jedzenie:3,picie:2,menu_klik:1,puszki_alarm:1,
-     kulejaca_skok:3,kulejaca_ladowanie:2,kulejaca_jek:4,kulejaca_szuranie:3,
-     muffinek_jek:3,muffinek_rzut:3,muffinka_trafienie:3,oszolomienie:2,muffinek_furia:2,schabowy_wyciaganie:1,schabowy_uderzenie:4,muffinek_przekaska:3,
-     patelnia_zamach:3,patelnia_trafienie:3,tasak_zamach:3,tasak_trafienie:3,kilof_zamach:3,kilof_trafienie:3,
-     kij_hokejowy_zamach:3,kij_hokejowy_trafienie:3,saperka_zamach:3,saperka_trafienie:3}};
+     jedzenie:3,picie:2,menu_klik:1,puszki_alarm:1}};
 function sndLoad(path){if(!ac||SND.buf[path]||SND.load[path])return;
   SND.load[path]=fetch('snd/'+path+'.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()})
     .then(a=>new Promise((ok,no)=>ac.decodeAudioData(a,ok,no))).then(b=>{SND.buf[path]=b}).catch(()=>{setTimeout(()=>{delete SND.load[path]},15000)})}
@@ -1364,15 +1361,8 @@ function snd(name,x,vol=1,o={}){
   if(x!=null&&player&&ac.createStereoPanner){const pn=ac.createStereoPanner();pn.pan.value=clamp((x-player.x)/700,-.8,.8);g.connect(pn);pn.connect(master)}else g.connect(master);
   s.start();return true}
 /* rodzaj broni → zestaw dźwięków (kij / nóż / łom / wręcz) */
-const WKIND={noz:'noz',hunting_knife:'noz',lom:'lom',steel_pipe:'lom',patelnia:'patelnia',tasak:'tasak',machete:'tasak',kilof:'kilof',kij_hokejowy:'kij_hokejowy',army_shovel:'saperka'};
 function wKind(hit){const w=player&&player.weapon,id=w?w.id:'piesci',d=WP[id]||{};
-  if(id==='siekiera')return hit?'tasak':'lom';if(WKIND[id])return WKIND[id];if(d.fists||!w)return'wrecz';return'kij'}
-/* głosy zależne od rodzaju zombie */
-function zGroan(z){if(z.eating)return snd('zombie_je',z.x,.5);if(z.type==='kulejaca')return snd('kulejaca_jek',z.x,.6);if(z.type==='muffinek')return snd(z.snack?'muffinek_przekaska':'muffinek_jek',z.x,.6);return snd('zombie_jek',z.x,.6)}
-function zRoar(z){if(z.type==='kulejaca')return snd('kulejaca_skok',z.x,.65);if(z.type==='muffinek')return snd('muffinek_jek',z.x,.9);return snd('zombie_ryk',z.x,.8)}
-/* szuranie nogi Kulejącej: raz na cykl kroku */
-function zStepSnd(){if(!ac||!zombies||!player)return;for(const z of zombies){if(z.dead||z.type!=='kulejaca'||!z.moving||z.lunge)continue;
-  const c=Math.floor((z.walkP||0)*1.5/8);if(z._sc==null){z._sc=c;continue}if(c!==z._sc){z._sc=c;if(Math.abs(z.x-player.x)<650&&z.f===player.f)snd('kulejaca_szuranie',z.x,.45)}}}
+  if(id==='siekiera')return hit?'noz':'lom';if(id==='noz')return'noz';if(id==='lom')return'lom';if(d.fists||!w)return'wrecz';return'kij'}
 /* drzwi: każde drzwi mają stały rodzaj dźwięku; przy skradaniu – ciche otwieranie */
 function doorSnd(d,x,v){let grp;if(player&&player.crouch)grp=4;else if(d){if(d.sg==null)d.sg=[0,1,2,3,5][Math.floor(Math.random()*5)];grp=d.sg}else grp=0;
   return snd('drzwi_otwieranie',x,grp===4?v*1.3:v,{i:grp*4+1+Math.floor(Math.random()*4)})}
@@ -1460,7 +1450,7 @@ function emitNoise(x,f,r,kind){
     z.state='investigate';z.tx=x+(R()*50-25);z.tf=f;z.look=3+R()*2;z.sus=Math.max(z.sus,.45);
   }
 }
-function toChase(z){if(z.state!=='chase'&&z.state!=='attack'){zRoar(z)||sfx('groan',z.x);if(R()<.6)emitNoise(z.x,z.f,150,'zombie')}z.state='chase';z.sus=1;z.lastSeen=0;z.tx=player.x;z.tf=player.f}
+function toChase(z){if(z.state!=='chase'&&z.state!=='attack'){snd('zombie_ryk',z.x,.8)||sfx('groan',z.x);if(R()<.6)emitNoise(z.x,z.f,150,'zombie')}z.state='chase';z.sus=1;z.lastSeen=0;z.tx=player.x;z.tf=player.f}
 
 /* ---------- perception ---------- */
 function canSee(z){
@@ -1499,10 +1489,11 @@ function updZombie(z,dt){
   if(z.wasCalm&&(z.state==='investigate'||z.state==='chase')){z.alertT=.85;z.eating=false;z.wasCalm=false;
     if(z.type==='muffinek'&&z.state==='chase'&&!G.muffWarned&&Math.abs(z.x-player.x)<600){G.muffWarned=true;toast('Muffinek dostrzegł błąd. Twój.',2600)}}
   if(z.stair){updStair(z,dt,.75);return}
+  if(z.down){z.down.t+=dt;z.moving=false;if(z.kb){moveEnt(z,z.kb*dt);z.kb*=.9}if(z.down.t>=z.down.dur){z.down=null;z.stagger=0}return}
   if(z.lunge){updLunge(z,dt);return}
   if(z.rage){updRage(z,dt);return}
   if(z.thr){updThrow(z,dt);return}
-  z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)zGroan(z)||sfx('groan',z.x)}
+  z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)(z.eating?snd('zombie_je',z.x,.5):snd('zombie_jek',z.x,.6))||sfx('groan',z.x)}
   if(z.stagger>0){z.stagger-=dt;moveEnt(z,z.kb*dt);z.kb*=.88;z.moving=false;return}
   const p=player,vis=canSee(z),dist=Math.abs(p.x-z.x);
   const night=phase()>.6;
@@ -2418,7 +2409,7 @@ const buyPrice=id=>Math.ceil(itemVal(id)*1.5);
 function sellVal(it){const v=itemVal(it.id);if(ID[it.id].wpn&&WP[it.id]&&WP[it.id].dur)return Math.max(1,Math.round(v*(it.dur==null?1:it.dur/WP[it.id].dur)));return v}
 function rollMerch(){const locs=DZ.map.pois.filter(p=>p.kind==='location'),known=locs.filter(p=>G.disc[p.id]);
   const p=pick(R()<.7&&known.length?known:locs);
-  const ids=Object.keys(ID).filter(id=>{const d=ID[id];return!d.quest&&!d.spoiled&&itemVal(id)>0&&id!=='dirty_water'&&id!=='pistolet'});
+  const ids=Object.keys(ID).filter(id=>{const d=ID[id];return!d.quest&&!d.spoiled&&itemVal(id)>0&&id!=='dirty_water'&&!(WP[id]&&WP[id].gun)});
   for(let i=ids.length-1;i>0;i--){const j=(R()*(i+1))|0;[ids[i],ids[j]]=[ids[j],ids[i]]}
   const pickC=(f,n)=>ids.filter(id=>f(ID[id])).slice(0,n);
   const sel=[...new Set([...pickC(d=>d.c==='Jedzenie',4),...pickC(d=>d.c==='Medyczne',2),...pickC(d=>d.wpn,2),...pickC(d=>d.c==='Materiały',3),...ids.slice(0,2)])];
@@ -2577,7 +2568,7 @@ ZT.kulejaca.text='Kobieta w kwiecistej sukience i rozpinanym swetrze, z wykręco
 function lungeCheck(z,p,dt){z.lungeCD=(z.lungeCD||0)-dt;if(z.lungeCD>0)return false;
   const d=p.x-z.x,ad=Math.abs(d);if(z.f!==p.f||p.stair||p.climb||p.hidden||p.dead||ad<85||ad>250||canSee(z)<=0)return false;
   const dir=Math.sign(d),[l,r]=regionBounds(z.x,z.f);z.face=dir;z.moving=false;
-  z.lunge={t:0,x0:z.x,x1:clamp(p.x-dir*34,l+10,r-10),dir,hit:false};z.lungeCD=4.5+R()*2;snd('kulejaca_skok',z.x,1)||sfx('groan',z.x);return true}
+  z.lunge={t:0,x0:z.x,x1:clamp(p.x-dir*34,l+10,r-10),dir,hit:false};z.lungeCD=4.5+R()*2;snd('zombie_ryk',z.x,.9)||sfx('groan',z.x);return true}
 const LW=.4,LF=.46,LL=.5;
 /* animacja skoku (8 klatek, uniesienie w locie jest już w grafice) */
 ZT.kulejaca.jm=[[0, 0, 115, 162, 94.7, 161.9], [117, 0, 137, 166, 97.4, 165.6], [256, 0, 196, 186, 120.1, 185.7], [454, 0, 243, 140, 148.1, 190.5], [699, 0, 212, 178, 127.0, 244.4], [913, 0, 151, 182, 84.1, 211.1], [1066, 0, 134, 152, 85.7, 152.4], [1202, 0, 90, 200, 74.6, 200.0]];ZT.kulejaca.jimg=loadImg('a/npc/kulejaca_skok.webp');
@@ -2585,7 +2576,7 @@ function updLunge(z,dt){const L=z.lunge,p=player;L.t+=dt;z.moving=false;
   if(L.t<LW){z.jy=0;return}
   if(L.t<LW+LF){const u=(L.t-LW)/LF;z.x=lerp(L.x0,L.x1,1-(1-u)*(1-u));z.jy=okI(ZT.kulejaca.jimg)?0:-Math.sin(Math.PI*u)*44;
     if(!L.hit&&u>.55&&z.f===p.f&&!p.stair&&!p.hidden&&!p.dead&&Math.abs(p.x-z.x)<56){L.hit=true;hurtPlayer(phase()>.6?22:18,z);p.x=clamp(p.x+L.dir*18,40,WORLD_W-40);shake=14}return}
-  z.jy=0;if(!L.landed){L.landed=1;snd('kulejaca_ladowanie',z.x,L.hit?1:.75)}if(L.t>=LW+LF+LL){z.lunge=null;if(L.hit){z.state='attack';z.atk=.3;z.hitDone=true}else{z.stagger=.35;z.kb=0}}}
+  z.jy=0;if(L.t>=LW+LF+LL){z.lunge=null;if(L.hit){z.state='attack';z.atk=.3;z.hitDone=true}else{z.stagger=.35;z.kb=0}}}
 function lungeFrame(z){const t=z.lunge.t;
   if(okI(ZT.kulejaca.jimg)){if(t<LW)return['jump',Math.min(1,Math.floor(t/LW*2))];if(t<LW+LF)return['jump',2+Math.min(3,Math.floor((t-LW)/LF*4))];return['jump',6+Math.min(1,Math.floor((t-LW-LF)/LL*2))]}
   if(t<LW)return['alert',Math.min(7,Math.floor(t/LW*8))];
@@ -2665,18 +2656,18 @@ function throwCheck(z,p,dt){z.thrCD=(z.thrCD==null?.8+R()*1.5:z.thrCD)-dt;if(z.t
 function updThrow(z,dt){const T=z.thr,p=player;T.t+=dt;z.moving=false;if(!T.rel)z.face=Math.sign(p.x-z.x)||z.face;
   if(!T.rel&&T.t>=TH_REL/TH_FPS){T.rel=true;const k=MU_K(),x0=z.x+z.face*(477-384)*k,y0=z.y+(413-748)*k;
     const tx=p.x,ty=p.y-112,dist=Math.abs(tx-x0),dur=clamp(dist/430,.45,1.15),g=820;
-    MUP.push({x:x0,y:y0,vx:(tx-x0)/dur,vy:(ty-y0-.5*g*dur*dur)/dur,g,f:z.f,t:0,face:z.face});snd('muffinek_rzut',z.x,.8)||sfx('swing',z.x)}
+    MUP.push({x:x0,y:y0,vx:(tx-x0)/dur,vy:(ty-y0-.5*g*dur*dur)/dur,g,f:z.f,t:0,face:z.face});sfx('swing',z.x)}
   if(T.t>=8/TH_FPS){z.thr=null;z.state='chase'}}
 /* --- furia --- */
 const RG={scream:[8,7],draw:[8,8],beat:[16,9]};
 function muffHit(z){if(z.type!=='muffinek'||z.hp<=0)return;z.snack=null;z.thr=null;z.mh=(z.mh||0)+1;
-  if(!z.raged&&!z.rage&&z.mh>=3&&muOk('rage_scream')){z.rage={ph:'scream',t:0};z.raged=true;z.stagger=0;z.hitT=0;snd('muffinek_furia',z.x,1)||sfx('groan',z.x);shake=8;
+  if(!z.raged&&!z.rage&&z.mh>=3&&muOk('rage_scream')){z.rage={ph:'scream',t:0};z.raged=true;z.stagger=0;z.hitT=0;snd('zombie_ryk',z.x,1)||sfx('groan',z.x);shake=8;
     if(!G.muffRage){G.muffRage=true;toast('Muffinek się wkurzył. Uciekaj albo kończ szybko.',2600)}}}
 function rageHitPlayer(z){const p=player;if(p.dead||p.hidden||p.stair||p.climb||z.f!==p.f||Math.abs(p.x-z.x)>78)return;
-  p.hp-=phase()>.6?8:6;p.hurt=.3;shake=10;flashT=.35;sfx('hurt');snd('schabowy_uderzenie',p.x,.9)||sfx('hit',p.x);for(let i=0;i<6;i++)blood(p.x,p.y-100,p.f,z.face);
+  p.hp-=phase()>.6?8:6;p.hurt=.3;shake=10;flashT=.35;sfx('hurt');sfx('hit',p.x);for(let i=0;i<6;i++)blood(p.x,p.y-100,p.f,z.face);
   p.search=null;p.peek=null;p.atk=0;p.stun=Math.max(p.stun||0,.75);p.stunT=0;moveEnt(p,z.face*6)}
 function updRage(z,dt){const R_=z.rage,p=player;R_.t+=dt;z.moving=false;z.stagger=0;
-  if(R_.ph==='scream'){z.face=Math.sign(p.x-z.x)||z.face;if(R_.t>=RG.scream[0]/RG.scream[1]){R_.ph='draw';R_.t=0;snd('schabowy_wyciaganie',z.x,.8)}return}
+  if(R_.ph==='scream'){z.face=Math.sign(p.x-z.x)||z.face;if(R_.t>=RG.scream[0]/RG.scream[1]){R_.ph='draw';R_.t=0}return}
   if(R_.ph==='draw'){if(R_.t>=RG.draw[0]/RG.draw[1]){R_.ph='go';R_.t=0}return}
   if(R_.ph==='go'){const d=p.x-z.x;if(p.dead||z.f!==p.f||p.stair||p.hidden||Math.abs(d)>520||R_.t>6){z.rage=null;toChase(z);return}
     z.face=Math.sign(d)||z.face;if(Math.abs(d)<60){R_.ph='beat';R_.t=0;R_.hit=-1;return}
@@ -2693,14 +2684,14 @@ const SN_FPS=6,SN_DUR=16/SN_FPS;
 function muffSnack(z,dt){if(z.type!=='muffinek')return false;
   if(z.snack){if(z.state!=='idle'&&z.state!=='wander'){z.snack=null;return false}z.snack.t+=dt;const fi=Math.floor(z.snack.t*SN_FPS);
     z.moving=false;if(fi<2||fi>=15){moveEnt(z,z.face*dt*14)}if(z.snack.t>=SN_DUR)z.snack=null;return true}
-  if((z.state==='wander'||z.state==='idle')&&!z.eating&&muOk('snack')&&R()<dt*.03){z.snack={t:0};snd('muffinek_przekaska',z.x,.55);return true}return false}
+  if((z.state==='wander'||z.state==='idle')&&!z.eating&&muOk('snack')&&R()<dt*.03){z.snack={t:0};return true}return false}
 /* --- pociski, rozbicia, ogłuszenie --- */
 function updMuffFx(dt){const p=player;
   for(const m of MUP){m.t+=dt;m.vy+=m.g*dt;m.x+=m.vx*dt;m.y+=m.vy*dt;
     if(p&&!p.dead&&!p.hidden&&!p.stair&&!p.climb&&m.f===p.f&&Math.abs(m.x-p.x)<24&&m.y>p.y-(p.crouch?120:172)&&m.y<p.y-8){m.done=true;
-      MUB.push({x:m.x,y:m.y,t:0});p.stun=1.6;p.stunT=0;p.search=null;p.peek=null;p.atk=0;hold.left=hold.right=hold.run=false;snd('muffinka_trafienie',p.x,.9)||sfx('hit',p.x);snd('oszolomienie',null,.45);shake=6;
+      MUB.push({x:m.x,y:m.y,t:0});p.stun=1.6;p.stunT=0;p.search=null;p.peek=null;p.atk=0;hold.left=hold.right=hold.run=false;sfx('hit',p.x);shake=6;
       if(!G.muffStun){G.muffStun=true;toast('Oberwałeś muffinką. Kręci ci się w głowie.',2400)}}
-    else if(m.y>F[m.f]-4||m.t>3){m.done=true;MUB.push({x:m.x,y:F[m.f]-14,t:0});snd('muffinka_trafienie',m.x,.5)}}
+    else if(m.y>F[m.f]-4||m.t>3){m.done=true;MUB.push({x:m.x,y:F[m.f]-14,t:0})}}
   MUP=MUP.filter(m=>!m.done);for(const b of MUB)b.t+=dt;MUB=MUB.filter(b=>b.t<.5);
   if(p&&p.stun>0)p.stunT=(p.stunT||0)+dt}
 function drawMuffFx(){const c=ctx,k=MU_K();
@@ -2709,9 +2700,145 @@ function drawMuffFx(){const c=ctx,k=MU_K();
   const p=player;if(p&&p.stun>0&&!p.dead&&okI(MFX.ring)){const i=Math.floor((p.stunT||0)*9)%3,w=160*k,h=64*k,a=Math.min(1,p.stun*3);
     c.save();c.globalAlpha=a;c.drawImage(MFX.ring,i*160,0,160,64,p.x-w/2,p.y-(p.crouch?128:178)-h/2,w,h);c.restore()}}
 
+/* ================= BRONIE: 25 broni z grafik (ikony, statystyki, umiejętności), broń palna, kusza, proca, gaśnica ================= */
+/* [plik, id w grze, nazwa, typ, obrażenia 1-10, szybkość 1-10, zasięg, siatka, umiejętność, opis umiejętności] */
+const WD=[["pistolet", "pistolet", "Pistolet", "palna", 4, 7, "średni", [2, 1], "dbl", "Szybki strzał: dwa strzały pod rząd bez celowania."], ["snajperka", "snajperka", "Snajperka z lunetą", "palna", 9, 2, "bardzo daleki", [5, 1], "glowa", "Strzał w głowę: trafienie w głowę z daleka zabija od razu."], ["snajperka_dwojnog", "snajperka_dwojnog", "Snajperka z dwójnogiem", "palna", 9, 2, "bardzo daleki", [5, 2], "rozstaw", "Rozstawienie: po przykucnięciu brak odrzutu i szybsze przeładowanie."], ["strzelba", "strzelba", "Strzelba", "palna", 8, 3, "krótki", [4, 1], "rozrzut", "Rozrzut: trafia kilku zombie naraz i odpycha je."], ["pistolet_maszynowy", "pistolet_maszynowy", "Pistolet maszynowy", "palna", 3, 10, "średni", [3, 2], "seria", "Seria: ogień ciągły, duże zużycie amunicji, głośny."], ["patelnia", "patelnia", "Patelnia żeliwna", "obuchowa", 5, 5, "krótki", [2, 2], "dzwon", "Dzwon: ogłusza zombie na 2 s; blokuje jeden cios z przodu."], ["tasak", "tasak", "Tasak", "sieczna", 6, 7, "bardzo krótki", [2, 1], "rzeznik", "Rzeźnik: szansa na odcięcie ręki (zombie słabiej atakuje)."], ["kij_hokejowy", "kij_hokejowy", "Kij hokejowy", "obuchowa", 4, 7, "długi", [4, 1], "slap", "Slapshot: odpycha zombie daleko i przewraca."], ["kij_hokejowy_podwojny", "kij_hokejowy_podwojny", "Podwójny kij hokejowy", "obuchowa", 5, 6, "długi", [4, 2], "mlynek", "Młynek: obrót trafia zombie z przodu i z tyłu."], ["kilof", "kilof", "Kilof", "kłuta", 8, 3, "średni", [3, 2], "przebicie", "Przebicie: przebija czaszkę, trudno wyciągnąć (chwila przerwy)."], ["mlotek_ciesielski", "mlotek", "Młotek ciesielski", "obuchowa", 5, 8, "bardzo krótki", [2, 1], "pazur", "Pazur: dobija leżącego zombie jednym ciosem; może podważać deski."], ["kij_bejsbolowy_gwozdzie", "kolczasta", "Kij bejsbolowy z gwoździami", "obuchowa", 7, 5, "średni", [4, 1], "krwawienie", "Krwawienie: rany zadają obrażenia przez 3 s."], ["deska_gwozdzie", "deska_gwozdzie", "Deska z gwoździami", "obuchowa", 5, 4, "średni", [4, 1], "klin", "Klin: gwoździe wbijają się, zombie zostaje unieruchomione na chwilę; deska może pęknąć."], ["kastet_stalowy", "kastet_stalowy", "Kastet stalowy", "pięści", 3, 9, "bardzo krótki", [1, 1], "combo", "Kombinacja: co trzeci cios pod rząd zadaje podwójne obrażenia."], ["kastet_zloty", "kastet_zloty", "Kastet złoty", "pięści", 3, 9, "bardzo krótki", [1, 1], "combo", "Jak stalowy + rzadki łup: lepsza cena u handlarza (Komis)."], ["rekawice_mma", "rekawice_mma", "Rękawice MMA", "pięści", 2, 10, "bardzo krótki", [2, 1], "obalenie", "Obalenie: chwyt i rzut zombie na ziemię, potem ciosy w parterze."], ["siekiera_strazacka", "siekiera_strazacka", "Siekiera strażacka", "sieczna", 8, 4, "średni", [3, 2], "obie", "Wyważanie: otwiera zamknięte drzwi; ciosy z obu stron ostrza."], ["saperka", "army_shovel", "Saperka", "sieczna", 5, 6, "średni", [2, 1], "skladana", "Składana: mało miejsca w plecaku; można nią kopać zakopane skrytki."], ["maczeta", "machete", "Maczeta", "sieczna", 6, 8, "średni", [3, 1], "przecinanie", "Przecinanie: trafia dwóch zombie stojących obok siebie."], ["klucz_hydrauliczny", "klucz_hydrauliczny", "Klucz hydrauliczny", "obuchowa", 6, 5, "krótki", [2, 1], "majster", "Majsterkowicz: odkręca zawory i włazy (dostęp do ukrytych miejsc)."], ["widly", "widly", "Widły", "kłuta", 5, 4, "bardzo długi", [5, 1], "dystans", "Dystans: trzyma zombie na odległość i spycha je."], ["kosa_bojowa", "kosa_bojowa", "Kosa bojowa", "sieczna", 8, 3, "bardzo długi", [6, 1], "zniwo", "Żniwo: szeroki zamach trafia wszystkich zombie w zasięgu."], ["kusza", "kusza", "Kusza", "strzelecka", 7, 2, "daleki", [4, 2], "cisza", "Cisza: strzał nie przyciąga innych zombie; bełty można podnieść."], ["proca", "proca", "Proca", "strzelecka", 2, 6, "średni", [1, 1], "odwrocenie", "Odwrócenie uwagi: strzał w przedmiot wabi zombie w inne miejsce."], ["gasnica", "gasnica", "Gaśnica", "specjalna", 3, 3, "krótki", [2, 2], "chmura", "Chmura: oślepia zombie w stożku na 3 s; gasi ogień; pustą można rzucić."]];
+const ZAS={'bardzo krótki':46,'krótki':52,'średni':60,'długi':72,'bardzo długi':86};
+const GUN={pistolet:{ammo:'amunicja',range:650,noise:1300,shake:7,atkD:.32,dmg:3.4},
+  snajperka:{ammo:'naboje_762',range:1500,noise:1600,shake:12,atkD:1.4,dmg:9,pierce:2},
+  snajperka_dwojnog:{ammo:'naboje_762',range:1500,noise:1600,shake:12,atkD:1.5,dmg:9,pierce:2},
+  strzelba:{ammo:'srut',range:330,noise:1500,shake:14,atkD:1.0,dmg:2.6,multi:3,kb:260},
+  pistolet_maszynowy:{ammo:'amunicja',range:600,noise:1500,shake:5,atkD:.6,dmg:1.25,burst:4},
+  kusza:{ammo:'belty',range:950,noise:40,shake:3,atkD:1.25,dmg:3.6,proj:'belt',spd:1100},
+  proca:{ammo:'kulki',range:620,noise:30,shake:1,atkD:.55,dmg:.7,proj:'kulka',spd:800}};
+const AMMO={naboje_762:{n:'Naboje 7,62 mm',d:'Karabinowe. Pasują do snajperek.',stack:20},srut:{n:'Naboje śrutowe',d:'Kaliber 12. Do strzelby.',stack:16},
+  belty:{n:'Bełty',d:'Do kuszy. Po trafieniu często da się je odzyskać.',stack:12},kulki:{n:'Kulki do procy',d:'Stalowe kulki i okrągłe kamienie. Ciche jak nic innego.',stack:30}};
+for(const[id,a]of Object.entries(AMMO))ID[id]={n:a.n,w:1,h:1,c:'Amunicja',d:a.d,stack:a.stack};
+ID.amunicja.d='Pasują do pistoletu i pistoletu maszynowego.';
+for(const[file,id,n,typ,o,s,z,g,sk,skd]of WD){
+  const old=ID[id],gun=GUN[id],ext=sk==='chmura';
+  const W={n,typ,sk,file,dmg:+(.35+o*.24).toFixed(2),reach:ZAS[z]||60,atkD:+(.78-s*.045).toFixed(2),stc:Math.round(8+(10-s)*1.3),
+    noise:typ==='pięści'?160:typ==='sieczna'?200:typ==='kłuta'?215:id==='patelnia'?330:240,
+    dur:typ==='pięści'?(id==='rekawice_mma'?24:40):id==='deska_gwozdzie'?6:id==='kolczasta'?9:typ==='sieczna'?10:typ==='kłuta'?11:13,
+    kb:typ==='pięści'?120:typ==='sieczna'?50:typ==='kłuta'?60:110,melee:!gun&&!ext,maxH:sk==='przecinanie'?2:sk==='zniwo'?6:sk==='mlynek'||sk==='obie'?2:1};
+  if(id==='kij_hokejowy')W.kb=200;
+  if(gun){Object.assign(W,gun);W.ranged=true;W.melee=false;W.gun=true;W.dur=0}
+  if(ext){Object.assign(W,{ext:true,dur:3,atkD:.7,noise:320,dmg:1.4})}
+  WP[id]=W;
+  ID[id]={n,w:g[0],h:g[1],c:'Broń',wpn:true,d:((old&&old.d&&!old.d.includes('Umiejętność'))?old.d+' ':'')+'Umiejętność: '+skd};
+  ICON_AT[id]={single:'a/w/'+file+'.webp'}}
+/* ikony broni z osobnych plików, dopasowane do pól plecaka */
+for(const a of Object.values(ICON_AT))if(a.single)loadImg(a.single);
+atlasIcon=(function(_a){return function(id,W,Hh){const a=ICON_AT[id];if(!a||!a.single)return _a(id,W,Hh);const img=loadImg(a.single);if(!okI(img))return null;
+  const c0=document.createElement('canvas');c0.width=W;c0.height=Hh;const g=c0.getContext('2d'),k=Math.min(W*.94/img.naturalWidth,Hh*.9/img.naturalHeight),w=img.naturalWidth*k,h=img.naturalHeight*k;
+  g.drawImage(img,(W-w)/2,(Hh-h)/2,w,h);return c0}})(atlasIcon);
+drawIcon=(function(_d){return function(c,id,W,Hh){const L=(x1,y1,x2,y2,w,col)=>{c.strokeStyle=col;c.lineWidth=w;c.lineCap='round';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke()};
+  const shell=(x,col,tip)=>{c.fillStyle=col;c.fillRect(x,22,10,30);c.fillStyle=tip;c.beginPath();c.moveTo(x,22);c.lineTo(x+5,10);c.lineTo(x+10,22);c.fill()};
+  if(id==='naboje_762'){for(let i=0;i<4;i++)shell(10+i*12,'#b88a3a','#8a5a2a');return}
+  if(id==='srut'){for(let i=0;i<3;i++){c.fillStyle='#a3241e';c.fillRect(12+i*15,16,12,34);c.fillStyle='#c9a24a';c.fillRect(12+i*15,44,12,8)}return}
+  if(id==='belty'){for(let i=0;i<3;i++){L(10,18+i*12,54,18+i*12,3,'#6a4a2a');c.fillStyle='#8a8f94';c.beginPath();c.moveTo(54,14+i*12);c.lineTo(62,18+i*12);c.lineTo(54,22+i*12);c.fill();c.fillStyle='#b23';c.fillRect(8,15+i*12,6,6)}return}
+  if(id==='kulki'){for(let i=0;i<7;i++){c.fillStyle=i%2?'#8d9296':'#76706a';c.beginPath();c.arc(16+(i%4)*11,24+Math.floor(i/4)*12,5,0,7);c.fill()}return}
+  return _d(c,id,W,Hh)}})(drawIcon);
+/* dźwięki broni: na razie istniejące zestawy wg typu, własne nagrania podpinamy później */
+wKind=(function(_k){return function(hit){const w=player&&player.weapon,d=w&&WP[w.id];if(!d||!d.typ)return _k(hit);
+  if(d.typ==='sieczna')return hit?'noz':'lom';if(d.typ==='kłuta')return'lom';if(d.typ==='pięści')return'wrecz';return w.id==='patelnia'?'lom':'kij'}})(wKind);
+/* --- łupy --- */
+const addL=(t,...e)=>{if(t)t.push(...e)};
+addL(PLOOT.lockers&&PLOOT.lockers[2],['strzelba',.03,1,1],['srut',.1,2,5],['kastet_stalowy',.06,1,1],['rekawice_mma',.06,1,1],['pistolet',.03,1,1],['gasnica',.05,1,1]);
+addL(PLOOT.tool_cabinet&&PLOOT.tool_cabinet[2],['klucz_hydrauliczny',.14,1,1],['kilof',.05,1,1],['kulki',.15,4,10]);
+addL(PLOOT.pallet_rack&&PLOOT.pallet_rack[2],['widly',.06,1,1],['kosa_bojowa',.04,1,1],['kilof',.05,1,1],['siekiera_strazacka',.03,1,1]);
+addL(PLOOT.kitchen_counter_sink&&PLOOT.kitchen_counter_sink[2],['patelnia',.1,1,1]);addL(PLOOT.kitchen_upper_cabinet&&PLOOT.kitchen_upper_cabinet[2],['tasak',.08,1,1],['patelnia',.05,1,1]);
+addL(PLOOT.office_desk&&PLOOT.office_desk[2],['proca',.05,1,1],['kulki',.08,5,12],['kastet_zloty',.015,1,1]);
+addL(PLOOT.wall_unit&&PLOOT.wall_unit[2],['kastet_zloty',.02,1,1]);addL(PLOOT.debris&&PLOOT.debris[2],['deska_gwozdzie',.07,1,1],['kulki',.25,4,10]);
+addL(PLOOT.box_pile&&PLOOT.box_pile[2],['kij_hokejowy',.06,1,1],['kij_hokejowy_podwojny',.02,1,1]);
+addL(PLOOT.welding_cart&&PLOOT.welding_cart[2],['gasnica',.15,1,1]);addL(PLOOT.filing_cabinet&&PLOOT.filing_cabinet[2],['gasnica',.04,1,1]);
+addL(LPI.military_crates.c[2],['snajperka',.05,1,1],['snajperka_dwojnog',.03,1,1],['pistolet_maszynowy',.06,1,1],['strzelba',.05,1,1],['naboje_762',.3,3,8],['srut',.3,3,8],['kusza',.05,1,1],['belty',.2,3,6]);
+addL(LPI.abandoned_camp.c[2],['kusza',.06,1,1],['belty',.3,2,5],['proca',.08,1,1],['kulki',.3,5,12]);
+addL(LPI.pickup_wreck.c[2],['siekiera_strazacka',.05,1,1],['klucz_hydrauliczny',.1,1,1]);addL(LPI.car_wreck.c[2],['kastet_stalowy',.03,1,1],['kij_hokejowy',.04,1,1]);
+addL(LPI.skeleton.c[2],['pistolet',.05,1,1],['amunicja',.15,2,6],['proca',.05,1,1]);
+rollLoot=(function(_r){return function(c){const g=_r(c);for(const it of[...g.items]){const w=WP[it.id];if(w&&w.gun&&!gCount(g,w.ammo))addItems(g,w.ammo,w.ammo==='naboje_762'?3:w.ammo==='belty'?3:4)}return g}})(rollLoot);
+/* --- warsztat --- */
+if(RECIPES.warsztat){const L=RECIPES.warsztat.list,at=L.findIndex(r=>r.special==='bag');L.splice(at<0?L.length:at,0,
+  {n:'Deska z gwoździami',d:'Szybka broń z deski i garści gwoździ. Szybko pęka.',need:{deski:1,gwozdzie:8},out:['deska_gwozdzie',1]},
+  {n:'Proca',d:'Widełki z drewna i guma ze szmat. Cicha, odwraca uwagę.',need:{deski:1,rags:2},out:['proca',1]},
+  {n:'Kulki do procy',d:'Garść kulek ze złomu.',need:{zlom:1},out:['kulki',12]},
+  {n:'Bełty',d:'Cztery bełty do kuszy z desek i złomu.',need:{deski:1,zlom:1},out:['belty',4]})}
+/* --- handel: złoty kastet i broń palna drożej --- */
+itemVal=(function(_v){return function(id){let v=_v(id);if(id==='kastet_zloty')v*=4;else if(WP[id]&&WP[id].gun)v*=2.2;return Math.round(v)}})(itemVal);
+/* ================= walka ================= */
+function knockDown(z,dur){if(!zSpr(z)||z.rage||z.lunge||z.dead)return;z.down={t:0,dur};z.thr=null;z.snack=null;z.moving=false;z.hitT=0}
+function downFrame(z){const u=z.down.t/z.down.dur;return['kick_fall',u<.45?Math.min(6,Math.floor(u/.45*7)):u<.85?6:7]}
+let PROJ=[],CLOUD=[];
+function wTargets(w,both,reach){const p=player;return zombies.filter(z=>!z.dead&&z.f===p.f&&!z.stair&&z.state!=='killed'&&Math.abs(z.x-p.x)<reach&&(both||(z.x-p.x)*p.face>-12)).sort((a,b)=>Math.abs(a.x-player.x)-Math.abs(b.x-player.x))}
+function hitZ(z,d,dir,kb){z.hp-=d;z.stagger=Math.max(z.stagger||0,.38);z.hitT=.55;z.eating=false;z.kb=dir*kb;if(z.rage){z.stagger=0;z.hitT=0;z.kb=0}muffHit(z);
+  for(let i=0;i<7;i++)blood(z.x,z.y-100,z.f,dir);if(z.hp<=0){z.down=null;killZombie(z,dir)}else toChase(z)}
+applyHit=function(){const p=player,w=curW();if(!w.typ&&!w.sk){/* stare bronie: zachowanie jak dotąd */}
+  const mult=(p.st<8?.55:1)*p.dmgM,both=w.sk==='mlynek'||w.sk==='obie';let hits=0,once=null;
+  let comboX=1;if(w.sk==='combo'){p.combo=(time-(p.comboT||-9)<1.4)?(p.combo||0)+1:1;p.comboT=time;if(p.combo%3===0)comboX=2}
+  for(const z of wTargets(w,both,w.reach)){if(hits>=(w.maxH||2))break;const dir=Math.sign(z.x-p.x)||p.face;let d=w.dmg*mult*comboX,kb=w.kb||80;
+    if(z.down){d*=1.5;if(w.sk==='pazur'){d=99;once='Pazur: dobity jednym ciosem'}}
+    if(w.sk==='dystans')kb=260;
+    hitZ(z,d,dir,kb);hits++;if(z.dead)continue;
+    if(w.sk==='dzwon'){z.stagger=1.8;z.kb*=.3;shake=7}
+    else if(w.sk==='rzeznik'&&!z.armless&&R()<.25){z.armless=true;for(let i=0;i<14;i++)blood(z.x+dir*10,z.y-120,z.f,dir);once='Odcięta ręka: słabiej gryzie'}
+    else if(w.sk==='slap'){z.kb=dir*320;knockDown(z,1.7)}
+    else if(w.sk==='krwawienie')z.bleed=3;
+    else if(w.sk==='klin'){z.stagger=1.3;z.kb=0;if(R()<.15&&p.weapon)p.weapon.dur=Math.max(1,p.weapon.dur-1)}
+    else if(w.sk==='obalenie'&&R()<.35){knockDown(z,2.2);once='Obalenie'}
+    else if(w.sk==='przebicie'){p.atk+=.3;p.atkDur+=.3}}
+  if(once&&!(G.wTip||{})[once]){G.wTip=G.wTip||{};G.wTip[once]=1;toast(once,1800)}
+  if(hits){sfx('hit',p.x);shake=Math.max(shake,5);wear()}
+  emitNoise(p.x,p.f,hits?w.noise:w.noise*.4,hits?'combat':'swing')};
+/* patelnia blokuje cios z przodu, odcięta ręka gryzie słabiej */
+hurtPlayer=(function(_h){return function(dmg,z){const p=player,w=curW();
+  if(z&&w.sk==='dzwon'&&!(p.blockCD>0)&&p.inv<=0&&!p.dead&&Math.sign(z.x-p.x)===p.face){p.blockCD=7;p.inv=.45;shake=6;sfx('hit',p.x);z.stagger=.7;z.kb=Math.sign(z.x-p.x)*140;
+    if(!(G.wTip||{}).blok){G.wTip=G.wTip||{};G.wTip.blok=1;toast('Patelnia zablokowała cios',1800)}return}
+  return _h(z&&z.armless?dmg*.5:dmg,z)}})(hurtPlayer);
+canSee=(function(_c){return function(z){if(z.blind>0)return 0;return _c(z)}})(canSee);
+/* strzał */
+function shootOnce(w){const p=player;if(!gTake(p.bag,w.ammo,1))return false;const id=p.weapon.id;
+  shake=w.shake;sfx('shot');parts.push({k:'flash',x:p.x+p.face*62,y:p.y-98,life:.08});if(w.noise>200)emitNoise(p.x,p.f,w.noise,'shot');
+  if(w.proj){PROJ.push({k:w.proj,x:p.x+p.face*40,y:p.y-(p.crouch?70:100),vx:p.face*w.spd,f:p.f,dmg:w.dmg*p.dmgM,left:w.range,id});return true}
+  let n=0;const max=w.multi||w.pierce||1;
+  for(const z of zombies.filter(z=>!z.dead&&z.f===p.f&&!z.stair&&(z.x-p.x)*p.face>0&&Math.abs(z.x-p.x)<w.range).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))){
+    let blocked=false;for(const bl of blockersOn(p.f))if(!(bl.door&&bl.open)&&(bl.x-z.x)*(bl.x-p.x)<0)blocked=true;if(blocked)break;
+    hitZ(z,w.dmg*(w.pierce&&n>0?.6:1),p.face,w.kb||40);n++;if(n>=max)break}
+  return true}
+function fireGun(w){const p=player;if(!gCount(p.bag,w.ammo)){toast('Brak amunicji: '+ID[w.ammo].n);return}
+  p.hidden=null;p.search=null;let d=w.atkD;if(p.weapon.id==='snajperka_dwojnog'&&p.crouch)d*=.55;if(p.weapon.id==='pistolet'&&time-(p.lastShot||-9)<.6&&!p.dbl){d=.14;p.dbl=true}else p.dbl=false;p.lastShot=time;
+  p.atk=d;p.atkDur=d;p.atkHit=true;
+  if(w.burst){p.burst={n:w.burst,t:0,w}}else shootOnce(w);
+  if(!gCount(p.bag,w.ammo))toast('Ostatni nabój')}
+function useExt(w){const p=player,cw=p.weapon;p.hidden=null;p.atk=w.atkD;p.atkDur=w.atkD;p.atkHit=true;
+  if(cw.dur>0){cw.dur--;sfx('swing');emitNoise(p.x,p.f,w.noise,'combat');
+    for(let i=0;i<26;i++)CLOUD.push({x:p.x+p.face*(30+R()*40),y:p.y-80-R()*50,vx:p.face*(120+R()*260),vy:(R()-.5)*60,r:10+R()*14,life:1.4+R()*.8,t:0});
+    let n=0;for(const z of wTargets(w,false,190)){z.blind=3;z.stagger=Math.max(z.stagger||0,.9);z.kb=p.face*60;z.state=z.state==='attack'?'chase':z.state;n++}
+    if(n&&!(G.wTip||{}).gas){G.wTip=G.wTip||{};G.wTip.gas=1;toast('Oślepione na 3 s',1600)}
+    if(!cw.dur)toast('Gaśnica pusta. Następny atak: rzut',2200);return}
+  const z=wTargets(w,false,300)[0];if(z)hitZ(z,1.6,p.face,200);sfx('hit',p.x);emitNoise(p.x,p.f,260,'combat');p.weapon=null;toast('Rzucasz pustą gaśnicą',1800);showState('Bez broni','Uwaga:')}
+doAttack=(function(_a){return function(){const p=player;if(p.stun>0)return;const w=curW();
+  if(w.gun||w.ext){if(p.stair||p.kill||p.search||p.bandage>0||p.atk>0||p.hurt>.15)return;return w.gun?fireGun(w):useExt(w)}
+  const was=p.atk;_a();if(p.atk>0&&!was&&w.atkD&&!p.kill){p.atk=p.atkDur=w.atkD;p.st=Math.min(100,p.st+14-(w.stc||14))}}})(doAttack);
+function updWeapons(dt){const p=player;if(!p)return;if(p.blockCD>0)p.blockCD-=dt;
+  if(p.burst){const b=p.burst;b.t-=dt;if(b.t<=0){if(b.n>0&&gCount(p.bag,b.w.ammo)){shootOnce(b.w);b.n--;b.t=.09}else p.burst=null}}
+  for(const z of zombies){if(z.dead)continue;if(z.blind>0)z.blind-=dt;
+    if(z.bleed>0){z.bleed-=dt;z.hp-=dt*.28;if(R()<dt*6)blood(z.x,z.y-90,z.f,z.face);if(z.hp<=0){z.bleed=0;killZombie(z,-z.face)}}}
+  for(const q of PROJ){const st=q.vx*dt;q.x+=st;q.left-=Math.abs(st);
+    for(const bl of blockersOn(q.f))if(!(bl.door&&bl.open)&&(bl.x-q.x)*(bl.x-(q.x-st))<=0){q.done=true;q.hitWall=true}
+    if(!q.done)for(const z of zombies){if(z.dead||z.f!==q.f||z.stair||Math.abs(z.x-q.x)>22)continue;hitZ(z,q.dmg,Math.sign(q.vx),q.k==='belt'?60:30);q.done=true;q.hitZ=true;
+      if(q.k==='belt'&&R()<.6&&addItems(p.bag,'belty',1)!==false){if(!(G.wTip||{}).belt){G.wTip=G.wTip||{};G.wTip.belt=1;toast('Odzyskujesz bełt',1400)}}break}
+    if(!q.done&&q.left<=0)q.done=true;
+    if(q.done&&q.k==='kulka'&&!q.hitZ){emitNoise(q.x,q.f,420,'distract');sfx('hit',q.x)}}
+  PROJ=PROJ.filter(q=>!q.done);
+  for(const c of CLOUD){c.t+=dt;c.x+=c.vx*dt;c.y+=c.vy*dt;c.vx*=.93;c.r+=dt*22}CLOUD=CLOUD.filter(c=>c.t<c.life)}
+function drawWeaponsFx(){const c=ctx;
+  for(const q of PROJ){if(q.k==='belt'){c.strokeStyle='#5a4028';c.lineWidth=3;c.beginPath();c.moveTo(q.x-Math.sign(q.vx)*26,q.y);c.lineTo(q.x,q.y);c.stroke();c.fillStyle='#9aa0a4';c.fillRect(q.x-2,q.y-2,4,4)}
+    else{c.fillStyle='#8d9296';c.beginPath();c.arc(q.x,q.y,3,0,7);c.fill()}}
+  for(const k of CLOUD){c.fillStyle='rgba(235,238,240,'+(.55*(1-k.t/k.life))+')';c.beginPath();c.arc(k.x,k.y,k.r,0,7);c.fill()}}
+
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
-function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];
+function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];PROJ=[];CLOUD=[];
   const r=G.raid,alive=G.chars.filter(c=>c.alive);r.other=alive.find(c=>c!==r.raider)||null;
   if(r.other&&r.task==='bandaze'){if(!gTake(G.storage,'tasma',1))r.task='sen'}
   INV.host=null;G.inBase=false;comp=null;
@@ -2775,7 +2902,7 @@ function update(dt){
   updPlayer(dt);
   if(G.inBase&&comp)updComp(comp,dt);
   for(const z of zombies)updZombie(z,dt);
-  updMuffFx(dt);
+  updMuffFx(dt);updWeapons(dt);
   for(const b of B)if(!b.revealed&&(doors.some(d=>d.b===b&&d.open)||wins.some(w=>w.b===b&&w.open)||(!player.climb&&bAt(player.x,player.f)===b))){b.revealed=true}
   updParts(dt);
   noiseLvl=Math.max(0,noiseLvl-dt*.6);
@@ -3181,7 +3308,7 @@ function render(){
   const ents=[];for(const z of zombies)if(Math.abs(z.x-camX-viewW/2)<viewW*.7)ents.push([z,true]);if(player&&(mode==='play'||mode==='inv'||mode==='pause'||mode==='craft'))ents.push([player,false]);if(G&&G.inBase&&comp)ents.push([comp,false]);
   ents.sort((a,b)=>(a[0].dead?-1:0)-(b[0].dead?-1:0)||(a[0].y+(a[0].z||0))-(b[0].y+(b[0].z||0)));
   for(const[e,z]of ents)drawEntity(e,z);
-  drawMuffFx();
+  drawMuffFx();drawWeaponsFx();
   for(const p of props)if((p.front||p.t==='trunk')&&inView(p))drawProp(p);
   const peekB=player&&player.peek&&mode!=='menu'?player.peek.b:null;
   for(const b of B)if(!b.revealed&&b!==peekB&&b.x1>camX-60&&b.x0<camX+viewW+60)drawFacade(b);
@@ -3218,7 +3345,7 @@ function updHud(){
   $('bag').textContent=G.inBase?'Kryjówka · dzień '+G.day:BAGS[G.raid.bagType].n+' '+gUsed(p.bag)+'/'+p.bag.w*p.bag.h;$('noiseWrap').hidden=!!G.inBase;
   const ch=p.ch,nd=`Sytość <b class="${ch.hunger<25?'low':''}">${Math.round(ch.hunger)}</b> · Woda <b class="${ch.thirst<25?'low':''}">${Math.round(ch.thirst==null?80:ch.thirst)}</b> · Wypoczęcie <b class="${ch.rest<30?'low':''}">${Math.round(ch.rest)}</b>`;if($('needs').dataset.v!==nd){$('needs').innerHTML=nd;$('needs').dataset.v=nd}$('noiseI').style.width=(noiseLvl*100)+'%';
   const w=curW(),cw=p.weapon;$('wName').textContent=w.n;
-  let d='';if(w.ranged)d=gCount(p.bag,'amunicja')+' naboi';else if(cw&&WP[cw.id].dur){const n=WP[cw.id].dur;for(let i=0;i<n;i++)d+=`<i class="${i<cw.dur?'':'off'}"></i>`}else d=cw?'':'bez broni';
+  let d='';if(w.ranged)d=gCount(p.bag,w.ammo||'amunicja')+' '+((ID[w.ammo||'amunicja']||{}).n||'naboi').toLowerCase();else if(cw&&WP[cw.id].dur){const n=WP[cw.id].dur;for(let i=0;i<n;i++)d+=`<i class="${i<cw.dur?'':'off'}"></i>`}else d=cw?'':'bez broni';
   if($('wDur').dataset.v!==d){$('wDur').innerHTML=d;$('wDur').dataset.v=d}
   let st='';if(p.wound)st+=`<div class="stt bad" title="Rana szarpana: krwawienie, użyj bandaża (H)">${ICON.wound}</div>`;if(p.exh)st+=`<div class="stt bad" title="Wyczerpanie">${ICON.exh}</div>`;
   if(p.sprain)st+=`<div class="stt bad" title="Zwichnięta kostka: kulejesz, nie możesz biegać. Wylecz snem w bazie.">${ICON.sprain}</div>`;
@@ -3394,7 +3521,7 @@ if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('700 20
 syncSys();
 setInterval(()=>{if(typeof isTouch!=='undefined')syncTouch()},250);
 let last=performance.now();
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);stepSnd();zStepSnd();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);stepSnd();
   if(mode==='play'||mode==='menu'||mode==='pause'||mode==='inv'||!document.querySelector('.screen:not([hidden])'))render();
   updHud();requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
