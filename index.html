@@ -1405,7 +1405,7 @@ function toast(html,ms=2600){const el=document.createElement('div');el.className
   while($('toasts').children.length>3)$('toasts').firstChild.remove();setTimeout(()=>el.remove(),ms)}
 let bannerT=0;
 function showState(t,label='Nowy stan:'){$('bannerT').textContent=t;$('banner').querySelector('small').textContent=label;$('banner').classList.add('on');bannerT=2.8}
-const TIPS=['Budynki są zamknięte. Przy drzwiach G pozwala zajrzeć przez dziurkę od klucza. Po rynnie i drabinie wejdziesz na dach albo przez okno.','Podejdź do zombie od tyłu po cichu (C) i naciśnij Spację, żeby zabić je bezgłośnie.',
+const TIPS=['Budynki są zamknięte. Przy drzwiach G pozwala podglądać przez dziurkę od klucza albo otwór na listy. Po rynnie i drabinie wejdziesz na dach albo przez okno.','Podejdź do zombie od tyłu po cichu (C) i naciśnij Spację, żeby zabić je bezgłośnie.',
   'Bieg i otwarta walka robią hałas. Pierścienie na ziemi pokazują, jak daleko niesie się dźwięk.',
   'Za wrakiem auta czy stosem opon naciśnij E, żeby się ukryć. Ciemne miejsca też pomagają.',
   'Po przeszukaniu otwiera się zawartość pojemnika. Przeciągnij rzeczy do plecaka. Tab otwiera plecak w każdej chwili.',
@@ -1653,7 +1653,7 @@ function interactTargets(){
     if(p.f===st.f1&&Math.abs(p.x-st.x1)<40)o.push({x:st.x1,label:st.ld||'Zejdź na dół',act:()=>{p.x=st.x1;startStair(p,st,false)}})}
   for(const u of uses)if(!u.done&&u.f===p.f&&Math.abs(u.x-p.x)<(u.r||60))o.push({x:u.x,label:u.label,act:()=>{if(u.once)u.done=true;u.act()}});
   for(const d of doors)if(d.f===p.f&&Math.abs(d.x-p.x)<50){o.push({x:d.x,label:d.open?'Zamknij drzwi':'Otwórz drzwi',act:()=>toggleDoor(d)});
-    if(!d.open&&d.b&&!d.b.revealed&&bAt(p.x,p.f)!==d.b)o.push({x:d.x,pri:1,label:'Zajrzyj przez dziurkę od klucza',act:()=>startPeek(d)})}
+    if(!d.open&&d.b&&!d.b.revealed&&bAt(p.x,p.f)!==d.b)o.push({x:d.x,pri:1,label:peekLabel(d),act:()=>startPeek(d)})}
   for(const c of climbs){
     if(p.f===c.f0&&Math.abs(p.x-c.x0)<40)o.push({x:c.x0,label:c.up,act:()=>startClimb(p,c,1)});
     if(p.f===c.f1&&Math.abs(p.x-c.x1)<40)o.push({x:c.x1,label:c.down,act:()=>startClimb(p,c,-1)});}
@@ -1674,7 +1674,7 @@ function land(p,h){const m=h/80;shake=16;snd('upadek',null,.9)||sfx('hurt');emit
   p.hp-=dmg;p.hurt=.7;flashT=.6;
   if(spr&&!p.sprain){p.sprain=true;showState('Zwichnięta kostka')}else toast('Twarde lądowanie: −'+dmg+' zdrowia');
   if(p.hp<=0)die();}
-function startPeek(d){const p=player;const dir=d.x===d.b.x0?1:-1;p.peek={d,b:d.b,t:0,cx:d.x+dir*230};p.crouch=true;sfx('search',p.x)}
+function startPeek(d){const p=player;const dir=d.x===d.b.x0?1:-1;p.peek={d,b:d.b,t:0,cx:d.x+dir*330};p.crouch=true;sfx('search',p.x)}
 function startClimb(e,c,dir){
   const up=dir>0,bx=c.x0,ty=F[up?c.f1:c.f0],tx=up?c.x1:c.x0,ex=up?c.x1:c.x0;
   const pts=up?[[e.x,e.y],[c.x0,e.y],[c.x0,F[c.f1]],[c.x1,F[c.f1]]]:[[e.x,e.y],[c.x1,e.y],[c.x0,F[c.f1]],[c.x0,F[c.f0]]];
@@ -1986,7 +1986,7 @@ function drawKitFacade(b){
 }
 function drawKitFront(b){const c=ctx,w=b.x1-b.x0;c.fillStyle='#0b0b0c';
   c.fillRect(b.x0-12,b.top-4,w+24,10);
-  for(let f=1;f<b.floors;f++){const st=b.stair;if(st&&st.D&&st.f1===f){c.fillRect(b.x0-12,F[f]+11+FDY,st.hx0-b.x0+12,8);c.fillRect(st.hx1,F[f]+11+FDY,b.x1-st.hx1+12,8)}else c.fillRect(b.x0-12,F[f]+11+FDY,w+24,8)}
+  if(b.revealed||(player&&player.peek&&player.peek.b===b))for(let f=1;f<b.floors;f++){const st=b.stair;if(st&&st.D&&st.f1===f){c.fillRect(b.x0-12,F[f]+11+FDY,st.hx0-b.x0+12,8);c.fillRect(st.hx1,F[f]+11+FDY,b.x1-st.hx1+12,8)}else c.fillRect(b.x0-12,F[f]+11+FDY,w+24,8)}
   for(const x of[b.x0,b.x1])for(let f=0;f<b.floors;f++){const y0=RTOP(f),y1=F[f]+17+FDY;
     if(b.door){if(f>0)drawWallStrip(b,x,f);continue}
     if(f===0){c.fillRect(x-12,y0,24,F[0]-216-y0)}
@@ -2886,6 +2886,24 @@ function hitFrame(z){const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
   if(z.hitT>0&&z.hitA&&xaOk(z,z.hitA))return[z.hitA,by(1-z.hitT/(z.hitD||.72),8)];
   if(z.blind>0&&xaOk(z,'oslepienie'))return['oslepienie',z.blind>.6?by((3-z.blind)/2.4,7):7];return null}
 
+/* ================= PODGLĄDANIE: dziurka od klucza albo otwór na listy, widok stożkiem od drzwi w głąb ================= */
+const MAILDOOR=/^d0[1-4]|^d0[89]/;
+function doorPeekKind(d){if(d.pk==null){const id=d.b&&d.b.door||'';d.pk=MAILDOOR.test(id)&&R()<.5?'listy':'klucz'}return d.pk}
+function peekLabel(d){return doorPeekKind(d)==='listy'?'Podglądaj przez otwór na listy':'Podglądaj przez dziurkę od klucza'}
+function drawPeekCone(s){const pk=player.peek,d=pk.d,b=d.b,dir=d.x===b.x0?1:-1,mail=doorPeekKind(d)==='listy',c=ctx;
+  const X=x=>(x-camX)*s,Y=y=>(y-camY)*s;
+  const ay=mail?F[0]-82:F[0]-104,far=dir>0?Math.min(b.x1-20,d.x+820):Math.max(b.x0+20,d.x-820);
+  const ax=X(d.x+dir*4),fx=X(far),h0=(mail?5:2.5)*s;
+  const top=mail?F[0]-205:RTOP(0)+44,bot=mail?F[0]+26:F[0]+8;
+  c.fillStyle='rgba(0,0,0,.96)';c.beginPath();c.rect(0,0,cv.width,cv.height);
+  c.moveTo(ax,Y(ay)-h0);c.lineTo(fx,Y(top));c.lineTo(fx,Y(bot));c.lineTo(ax,Y(ay)+h0);c.closePath();c.fill('evenodd');
+  /* miękkie brzegi i zmrok w głębi */
+  c.save();c.beginPath();c.moveTo(ax,Y(ay)-h0);c.lineTo(fx,Y(top));c.lineTo(fx,Y(bot));c.lineTo(ax,Y(ay)+h0);c.closePath();c.clip();
+  const g=c.createLinearGradient(ax,0,fx,0);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.7,'rgba(0,0,0,.15)');g.addColorStop(1,'rgba(0,0,0,.75)');c.fillStyle=g;c.fillRect(Math.min(ax,fx),0,Math.abs(fx-ax),cv.height);
+  c.lineWidth=18*s;c.strokeStyle='rgba(0,0,0,.45)';c.beginPath();c.moveTo(ax,Y(ay)-h0);c.lineTo(fx,Y(top));c.moveTo(ax,Y(ay)+h0);c.lineTo(fx,Y(bot));c.stroke();c.restore();
+  c.fillStyle='#ebe3d2';c.font=`600 ${Math.round(15*dpr)}px "Barlow Semi Condensed",Arial,sans-serif`;c.textAlign='center';
+  c.fillText((mail?'Otwór na listy':'Dziurka od klucza')+' · ruch albo E kończy',cv.width/2,cv.height-30*dpr)}
+
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
 function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];PROJ=[];CLOUD=[];
@@ -3367,7 +3385,8 @@ function render(){
   ctx.setTransform(s,0,0,s,(-camX+sx)*s,(-camY+sy)*s);drawOverlays();
   ctx.setTransform(s,0,0,s,0,-camY*s);drawForeground();
   ctx.setTransform(1,0,0,1,0,0);
-  if(peekB){const pk=player.peek;const cx=(pk.cx-camX)*s,cy=(470-camY)*s,R=cv.height*.2;
+  if(peekB){drawPeekCone(s)}
+  if(false){const pk=player.peek;const cx=(pk.cx-camX)*s,cy=(470-camY)*s,R=cv.height*.2;
     ctx.fillStyle='rgba(0,0,0,.95)';ctx.beginPath();ctx.rect(0,0,cv.width,cv.height);ctx.moveTo(cx+R,cy-R*.35);ctx.arc(cx,cy-R*.35,R,0,Math.PI*2);
     ctx.moveTo(cx-R*.5,cy+R*.3);ctx.lineTo(cx-R*1.05,cy+R*2.2);ctx.lineTo(cx+R*1.05,cy+R*2.2);ctx.lineTo(cx+R*.5,cy+R*.3);ctx.closePath();ctx.fill('evenodd');
     ctx.fillStyle='#ebe3d2';ctx.font=`600 ${Math.round(15*dpr)}px "Barlow Semi Condensed",Arial,sans-serif`;ctx.textAlign='center';ctx.fillText('Dziurka od klucza · ruch albo E kończy',cv.width/2,cv.height-30*dpr)}
