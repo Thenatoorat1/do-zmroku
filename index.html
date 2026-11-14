@@ -760,10 +760,12 @@ for(const t of Object.values(ZT)){t.img=new Image();t.img.onload=()=>{t.ok=true}
 function pickZType(){let r=R();for(const[k,t]of Object.entries(ZT)){if((r-=t.w)<0)return k}return'lazega'}
 function zFrame(z){
   if(z.lunge)return lungeFrame(z);
+  if(z.type==='muffinek'){const mf=muffFrame(z);if(mf)return mf}
   const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
   if(z.da)return[z.da.n,Math.min(7,Math.floor(z.da.t*9)),z.da.flip];
   if(z.state==='killed')return['idle',0];
   if(z.hitT>0)return['hit',by(1-z.hitT/.55,8)];
+  if(z.snack)return['snack',Math.min(15,Math.floor(z.snack.t*SN_FPS))];
   if(z.state==='attack')return['attack',by(z.atk/1.15,8)];
   if(z.alertT>0)return['alert',by(1-z.alertT/.85,8)];
   if(z.stair||z.moving)return['walk',Math.floor(z.walkP*1.5)%8];
@@ -771,8 +773,8 @@ function zFrame(z){
   return['idle',Math.floor((time+z.ph)*6)%8];
 }
 function drawZSprite(z){
-  const T=ZT[z.type],[n,i,flip]=zFrame(z);const JM=n==='jump';const[sx,sy,w,h,ax,ay]=JM?T.jm[i]:T.meta.a[n][i];const k=T.H/T.meta.H;
-  ctx.save();ctx.translate(z.x,z.y+(z.z||0)+2+(z.jy||0));ctx.scale((z.face||1)*(flip?-1:1)*k,k);ctx.drawImage(JM?T.jimg:T.img,sx,sy,w,h,-ax,-ay,w,h);ctx.restore();
+  const T=ZT[z.type],[n,i,flip]=zFrame(z);const X=T.xa&&T.xa[n];const[sx,sy,w,h,ax,ay]=X?X.m[i]:T.meta.a[n][i];const k=T.H/T.meta.H;
+  ctx.save();ctx.translate(z.x,z.y+(z.z||0)+2+(z.jy||0));ctx.scale((z.face||1)*(flip?-1:1)*k,k);ctx.drawImage(X?X.img:T.img,sx,sy,w,h,-ax,-ay,w,h);ctx.restore();
 }
 const zSpr=z=>z.type&&ZT[z.type]&&ZT[z.type].ok;
 
@@ -1405,7 +1407,7 @@ function press(a){
   if(a==='pause'){if(mode==='craft'){closeCraft();return}if(mode==='play')setPause(true);else if(mode==='pause')setPause(false);else if(mode==='inv')closeRaidInv();return}
   if(a==='inv'){if(mode==='play'&&!player.dead){hold.left=hold.right=hold.run=false;if(G.inBase)openBaseInv();else openRaidInv(null)}else if(mode==='inv')closeRaidInv();return}
   if(mode!=='play'||player.dead)return;
-  const p=player;
+  const p=player;if(p.stun>0)return;
   if(a==='crouch'){if(p.hidden||p.stair||p.kill)return;p.crouch=!p.crouch;return}
   if(a==='attack')return doAttack();
   if(a==='interact')return doInteract(0);
@@ -1487,6 +1489,8 @@ function updZombie(z,dt){
     if(z.type==='muffinek'&&z.state==='chase'&&!G.muffWarned&&Math.abs(z.x-player.x)<600){G.muffWarned=true;toast('Muffinek dostrzegł błąd. Twój.',2600)}}
   if(z.stair){updStair(z,dt,.75);return}
   if(z.lunge){updLunge(z,dt);return}
+  if(z.rage){updRage(z,dt);return}
+  if(z.thr){updThrow(z,dt);return}
   z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)(z.eating?snd('zombie_je',z.x,.5):snd('zombie_jek',z.x,.6))||sfx('groan',z.x)}
   if(z.stagger>0){z.stagger-=dt;moveEnt(z,z.kb*dt);z.kb*=.88;z.moving=false;return}
   const p=player,vis=canSee(z),dist=Math.abs(p.x-z.x);
@@ -1502,13 +1506,15 @@ function updZombie(z,dt){
   }
   if(z.alertT>0){z.alertT-=dt;z.moving=false;if(z.state==='chase'||z.state==='investigate')z.face=Math.sign(z.tx-z.x)||z.face;return}
   z.wasCalm=z.state==='idle'||z.state==='wander';
+  if(muffSnack(z,dt))return;
   switch(z.state){
     case'idle':z.moving=false;if(z.eating)break;z.t-=dt;if(z.t<0){if(R()<.5){z.face*=-1;z.t=2+R()*4}else{z.state='wander';const[l,r]=regionBounds(z.x,z.f);z.tx=clamp(z.x+(R()*2-1)*240,l,r);z.tf=z.f}}break;
     case'wander':if(goTo(z,z.tx,z.tf,26*z.limp,dt)==='arrived'){z.state='idle';z.t=2+R()*5}break;
     case'investigate':{const r=goTo(z,z.tx,z.tf,58*z.limp,dt);if(r==='arrived'){z.look-=dt;z.moving=false;if((z.look*1.3|0)!==((z.look+dt)*1.3|0))z.face*=-1;if(z.look<=0){z.state='idle';z.t=3+R()*4;z.sus=Math.min(z.sus,.3)}}break}
     case'chase':{
       if(z.type==='kulejaca'&&lungeCheck(z,p,dt))break;
-      const sp=(night?118:98)*(.85+z.limp*.2)*(z.type==='kulejaca'?.42:1);
+      if(z.type==='muffinek'&&throwCheck(z,p,dt))break;
+      const sp=(night?118:98)*(.85+z.limp*.2)*(z.type==='kulejaca'?.42:z.type==='muffinek'?.72:1);
       if(z.f===p.f&&!p.stair&&!z.stair&&Math.abs(p.x-z.x)<44&&!p.dead&&!p.hidden){z.state='attack';z.atk=0;z.hitDone=false;z.face=Math.sign(p.x-z.x)||z.face;z.moving=false;break}
       const r=goTo(z,z.tx,z.tf,sp,dt);if(r==='arrived'&&z.lastSeen>1.2){z.state='investigate';z.look=3}
       break}
@@ -1559,7 +1565,7 @@ function applyHit(){
   const mult=(p.st<8?.55:1)*p.dmgM;
   for(const z of zombies){if(z.dead||z.f!==p.f||z.stair||z.state==='killed')continue;const dx=z.x-p.x;
     if(Math.abs(dx)<w.reach&&(dx*p.face>-12)){
-      z.hp-=w.dmg*mult;z.stagger=.38;z.hitT=.55;z.eating=false;z.kb=p.face*w.kb;hits++;
+      z.hp-=w.dmg*mult;z.stagger=.38;z.hitT=.55;z.eating=false;z.kb=p.face*w.kb;hits++;if(z.rage){z.stagger=0;z.hitT=0;z.kb=0}muffHit(z);
       for(let i=0;i<7;i++)blood(z.x,z.y-100,z.f,p.face);
       if(z.hp<=0)killZombie(z,p.face);else toChase(z);
       if(hits>=2)break}}
@@ -1688,6 +1694,7 @@ function updPlayer(dt){
   if(p.stair){updStair(p,dt,1);return}
   if(p.climb){updClimb(p,dt);p.st=Math.max(0,p.st-dt*6);return}
   if(p.fallJ){updFall(p,dt);return}
+  if(p.stun>0){p.stun-=dt;p.moving=false;p.crouch=false;p.st=Math.min(100,p.st+dt*4);return}
   if(p.peek){p.peek.t+=dt;p.moving=false;if(hold.left||hold.right||p.peek.t>10||p.peek.d.open)p.peek=null;return}
   if(p.kill){
     const k=p.kill,FN=FINISHERS[k.type];k.t+=dt;FN.update(k,p,dt);
@@ -2628,9 +2635,72 @@ function drawWallStrip(b,x,f){const R=doorSide(b,x),ww=65*AS,X=R?x-DJ:x+DJ-ww,y0
   dImg(img,X,y0,ww,DH,!R);c.restore()}
 function drawDoorFront(b,x){const fw=DOORDEF[b.door][1]*AS,fh=633*AS;dImg(AI('doors/'+b.door+'_front'),x-fw/2,F[0]+FDY+2-fh,fw,fh,false)}
 
+/* ================= MUFFINEK: rzut muffinką (ogłusza), furia z kotletem, przekąska w trakcie łażenia ================= */
+const MUFM={"throw": [[0, 0, 88, 203, 61.8, 202.6], [90, 0, 135, 201, 96.1, 201.0], [227, 0, 171, 195, 122.6, 195.3], [400, 0, 137, 199, 88.3, 199.0], [539, 0, 144, 198, 95.1, 197.9], [685, 0, 177, 192, 104.9, 191.7], [864, 0, 96, 202, 71.7, 202.1], [962, 0, 96, 202, 65.5, 202.1]], "rage_scream": [[1060, 0, 112, 195, 76.4, 194.8], [1174, 0, 119, 197, 79.5, 197.4], [1295, 0, 112, 205, 79.5, 204.7], [1409, 0, 180, 207, 124.2, 206.8], [1591, 0, 167, 214, 111.7, 214.0], [1760, 0, 174, 215, 120.5, 214.5], [1936, 0, 112, 197, 83.6, 196.9], [0, 217, 122, 198, 83.6, 197.9]], "cutlet_draw": [[124, 217, 112, 203, 72.7, 203.1], [238, 217, 88, 199, 71.2, 199.5], [328, 217, 121, 203, 85.2, 202.6], [451, 217, 112, 203, 75.3, 203.1], [565, 217, 111, 203, 70.6, 203.1], [678, 217, 117, 205, 73.8, 205.2], [797, 217, 134, 216, 94.5, 215.6], [933, 217, 142, 214, 99.2, 214.0]], "cutlet_attack": [[1077, 217, 100, 226, 85.2, 226.0], [1179, 217, 132, 193, 76.9, 192.7], [1313, 217, 163, 192, 87.3, 192.2], [1478, 217, 133, 195, 79.5, 195.3], [1613, 217, 109, 204, 88.8, 204.2], [1724, 217, 193, 197, 94.5, 196.9], [0, 445, 146, 221, 95.6, 220.8], [148, 445, 113, 227, 84.7, 227.0]], "snack": [[0, 0, 122, 199, 80.5, 199.5], [124, 0, 117, 199, 83.6, 199.5], [243, 0, 116, 204, 75.3, 204.2], [361, 0, 112, 199, 83.6, 199.5], [475, 0, 135, 201, 87.8, 201.0], [612, 0, 119, 197, 81.6, 197.4], [733, 0, 96, 201, 72.2, 201.0], [831, 0, 126, 203, 81.0, 202.6], [959, 0, 126, 204, 81.0, 203.6], [1087, 0, 117, 206, 76.4, 205.7], [1206, 0, 133, 203, 88.3, 202.6], [1341, 0, 133, 203, 85.2, 203.1], [1476, 0, 101, 204, 76.9, 204.2], [1579, 0, 106, 208, 82.1, 207.8], [1687, 0, 114, 205, 83.1, 204.7], [1803, 0, 121, 204, 78.4, 203.6]]};
+ZT.muffinek.xa={};for(const[n,m]of Object.entries(MUFM))ZT.muffinek.xa[n]={img:loadImg(n==='snack'?'a/npc/muffinek_snack.webp':'a/npc/muffinek_furia.webp'),m};
+ZT.kulejaca.xa={jump:{img:ZT.kulejaca.jimg,m:ZT.kulejaca.jm}};
+const MFX={lot:loadImg('a/npc/muffinka_lot.webp'),boom:loadImg('a/npc/muffinka_rozbicie.webp'),ring:loadImg('a/npc/oszolomienie.webp')};
+ZT.muffinek.sub='Powolny, rzuca muffinką, a wkurzony bije schabowym';
+ZT.muffinek.text+=' Kiedy zobaczy cię z daleka, rzuca w ciebie muffinką: trafiony na chwilę nie możesz się ruszyć. Po kilku ciosach wpada w furię: krzyczy, wyciąga schabowego i okłada cię nim, a ty przez chwilę nic nie zrobisz. Między jednym a drugim kęsem zatrzymuje się na przekąskę.';
+const MU_K=()=>ZT.muffinek.H/200*200/385; /* piksele arkusza 768 -> gra */
+const muOk=n=>okI(ZT.muffinek.xa[n].img);
+let MUP=[],MUB=[];
+/* --- rzut --- */
+const TH_FPS=8,TH_REL=4;
+function throwCheck(z,p,dt){z.thrCD=(z.thrCD==null?.8+R()*1.5:z.thrCD)-dt;if(z.thrCD>0||!muOk('throw'))return false;
+  const d=p.x-z.x,ad=Math.abs(d);if(z.f!==p.f||p.stair||p.climb||p.hidden||p.dead||ad<220||ad>640||(z.lastSeen||0)>.6)return false;
+  for(const bl of blockersOn(z.f))if(!(bl.door&&bl.open)&&(bl.x-z.x)*(bl.x-p.x)<0)return false;
+  z.face=Math.sign(d)||z.face;z.moving=false;z.thr={t:0,rel:false};z.thrCD=5+R()*3;return true}
+function updThrow(z,dt){const T=z.thr,p=player;T.t+=dt;z.moving=false;if(!T.rel)z.face=Math.sign(p.x-z.x)||z.face;
+  if(!T.rel&&T.t>=TH_REL/TH_FPS){T.rel=true;const k=MU_K(),x0=z.x+z.face*(477-384)*k,y0=z.y+(413-748)*k;
+    const tx=p.x,ty=p.y-112,dist=Math.abs(tx-x0),dur=clamp(dist/430,.45,1.15),g=820;
+    MUP.push({x:x0,y:y0,vx:(tx-x0)/dur,vy:(ty-y0-.5*g*dur*dur)/dur,g,f:z.f,t:0,face:z.face});sfx('swing',z.x)}
+  if(T.t>=8/TH_FPS){z.thr=null;z.state='chase'}}
+/* --- furia --- */
+const RG={scream:[8,7],draw:[8,8],beat:[16,9]};
+function muffHit(z){if(z.type!=='muffinek'||z.hp<=0)return;z.snack=null;z.thr=null;z.mh=(z.mh||0)+1;
+  if(!z.raged&&!z.rage&&z.mh>=3&&muOk('rage_scream')){z.rage={ph:'scream',t:0};z.raged=true;z.stagger=0;z.hitT=0;snd('zombie_ryk',z.x,1)||sfx('groan',z.x);shake=8;
+    if(!G.muffRage){G.muffRage=true;toast('Muffinek się wkurzył. Uciekaj albo kończ szybko.',2600)}}}
+function rageHitPlayer(z){const p=player;if(p.dead||p.hidden||p.stair||p.climb||z.f!==p.f||Math.abs(p.x-z.x)>78)return;
+  p.hp-=phase()>.6?8:6;p.hurt=.3;shake=10;flashT=.35;sfx('hurt');sfx('hit',p.x);for(let i=0;i<6;i++)blood(p.x,p.y-100,p.f,z.face);
+  p.search=null;p.peek=null;p.atk=0;p.stun=Math.max(p.stun||0,.75);p.stunT=0;moveEnt(p,z.face*6)}
+function updRage(z,dt){const R_=z.rage,p=player;R_.t+=dt;z.moving=false;z.stagger=0;
+  if(R_.ph==='scream'){z.face=Math.sign(p.x-z.x)||z.face;if(R_.t>=RG.scream[0]/RG.scream[1]){R_.ph='draw';R_.t=0}return}
+  if(R_.ph==='draw'){if(R_.t>=RG.draw[0]/RG.draw[1]){R_.ph='go';R_.t=0}return}
+  if(R_.ph==='go'){const d=p.x-z.x;if(p.dead||z.f!==p.f||p.stair||p.hidden||Math.abs(d)>520||R_.t>6){z.rage=null;toChase(z);return}
+    z.face=Math.sign(d)||z.face;if(Math.abs(d)<60){R_.ph='beat';R_.t=0;R_.hit=-1;return}
+    moveEnt(z,z.face*Math.min(Math.abs(d)-50,dt*70));z.moving=true;z.walkP+=dt*5;return}
+  if(R_.ph==='beat'){const fi=Math.floor(R_.t*RG.beat[1]);if(fi!==R_.hit&&(fi===2||fi===6||fi===10||fi===14)){R_.hit=fi;rageHitPlayer(z)}
+    if(R_.t>=RG.beat[0]/RG.beat[1]){z.rage=null;z.state='chase';z.atk=0;p.inv=Math.max(p.inv,1.2)}}}
+function muffFrame(z){
+  if(z.rage){const r=z.rage,by=(n,fps)=>Math.min(n-1,Math.floor(r.t*fps));
+    if(r.ph==='scream')return['rage_scream',by(8,RG.scream[1])];if(r.ph==='draw')return['cutlet_draw',by(8,RG.draw[1])];
+    if(r.ph==='go')return['walk',Math.floor(z.walkP*1.5)%8];return['cutlet_attack',by(16,RG.beat[1])%8]}
+  if(z.thr)return['throw',Math.min(7,Math.floor(z.thr.t*TH_FPS))];return null}
+/* --- przekąska --- */
+const SN_FPS=6,SN_DUR=16/SN_FPS;
+function muffSnack(z,dt){if(z.type!=='muffinek')return false;
+  if(z.snack){if(z.state!=='idle'&&z.state!=='wander'){z.snack=null;return false}z.snack.t+=dt;const fi=Math.floor(z.snack.t*SN_FPS);
+    z.moving=false;if(fi<2||fi>=15){moveEnt(z,z.face*dt*14)}if(z.snack.t>=SN_DUR)z.snack=null;return true}
+  if((z.state==='wander'||z.state==='idle')&&!z.eating&&muOk('snack')&&R()<dt*.03){z.snack={t:0};return true}return false}
+/* --- pociski, rozbicia, ogłuszenie --- */
+function updMuffFx(dt){const p=player;
+  for(const m of MUP){m.t+=dt;m.vy+=m.g*dt;m.x+=m.vx*dt;m.y+=m.vy*dt;
+    if(p&&!p.dead&&!p.hidden&&!p.stair&&!p.climb&&m.f===p.f&&Math.abs(m.x-p.x)<24&&m.y>p.y-(p.crouch?120:172)&&m.y<p.y-8){m.done=true;
+      MUB.push({x:m.x,y:m.y,t:0});p.stun=1.6;p.stunT=0;p.search=null;p.peek=null;p.atk=0;hold.left=hold.right=hold.run=false;sfx('hit',p.x);shake=6;
+      if(!G.muffStun){G.muffStun=true;toast('Oberwałeś muffinką. Kręci ci się w głowie.',2400)}}
+    else if(m.y>F[m.f]-4||m.t>3){m.done=true;MUB.push({x:m.x,y:F[m.f]-14,t:0})}}
+  MUP=MUP.filter(m=>!m.done);for(const b of MUB)b.t+=dt;MUB=MUB.filter(b=>b.t<.5);
+  if(p&&p.stun>0)p.stunT=(p.stunT||0)+dt}
+function drawMuffFx(){const c=ctx,k=MU_K();
+  for(const m of MUP){if(!okI(MFX.lot))continue;const i=Math.floor(m.t*16)%8,s=64*k;c.drawImage(MFX.lot,i*64,0,64,64,m.x-s/2,m.y-s/2,s,s)}
+  for(const b of MUB){if(!okI(MFX.boom))continue;const i=Math.min(3,Math.floor(b.t*8)),s=128*k;c.drawImage(MFX.boom,i*128,0,128,128,b.x-s/2,b.y-s/2,s,s)}
+  const p=player;if(p&&p.stun>0&&!p.dead&&okI(MFX.ring)){const i=Math.floor((p.stunT||0)*9)%3,w=160*k,h=64*k,a=Math.min(1,p.stun*3);
+    c.save();c.globalAlpha=a;c.drawImage(MFX.ring,i*160,0,160,64,p.x-w/2,p.y-(p.crouch?128:178)-h/2,w,h);c.restore()}}
+
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
-function launchRaid(){G.muffWarned=false;
+function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];
   const r=G.raid,alive=G.chars.filter(c=>c.alive);r.other=alive.find(c=>c!==r.raider)||null;
   if(r.other&&r.task==='bandaze'){if(!gTake(G.storage,'tasma',1))r.task='sen'}
   INV.host=null;G.inBase=false;comp=null;
@@ -2694,6 +2764,7 @@ function update(dt){
   updPlayer(dt);
   if(G.inBase&&comp)updComp(comp,dt);
   for(const z of zombies)updZombie(z,dt);
+  updMuffFx(dt);
   for(const b of B)if(!b.revealed&&(doors.some(d=>d.b===b&&d.open)||wins.some(w=>w.b===b&&w.open)||(!player.climb&&bAt(player.x,player.f)===b))){b.revealed=true}
   updParts(dt);
   noiseLvl=Math.max(0,noiseLvl-dt*.6);
@@ -3099,6 +3170,7 @@ function render(){
   const ents=[];for(const z of zombies)if(Math.abs(z.x-camX-viewW/2)<viewW*.7)ents.push([z,true]);if(player&&(mode==='play'||mode==='inv'||mode==='pause'||mode==='craft'))ents.push([player,false]);if(G&&G.inBase&&comp)ents.push([comp,false]);
   ents.sort((a,b)=>(a[0].dead?-1:0)-(b[0].dead?-1:0)||(a[0].y+(a[0].z||0))-(b[0].y+(b[0].z||0)));
   for(const[e,z]of ents)drawEntity(e,z);
+  drawMuffFx();
   for(const p of props)if((p.front||p.t==='trunk')&&inView(p))drawProp(p);
   const peekB=player&&player.peek&&mode!=='menu'?player.peek.b:null;
   for(const b of B)if(!b.revealed&&b!==peekB&&b.x1>camX-60&&b.x0<camX+viewW+60)drawFacade(b);
