@@ -759,6 +759,7 @@ const ZT={
 for(const t of Object.values(ZT)){t.img=new Image();t.img.onload=()=>{t.ok=true};t.img.src=t.src}
 function pickZType(){let r=R();for(const[k,t]of Object.entries(ZT)){if((r-=t.w)<0)return k}return'lazega'}
 function zFrame(z){
+  if(z.lunge)return lungeFrame(z);
   const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
   if(z.da)return[z.da.n,Math.min(7,Math.floor(z.da.t*9)),z.da.flip];
   if(z.state==='killed')return['idle',0];
@@ -771,7 +772,7 @@ function zFrame(z){
 }
 function drawZSprite(z){
   const T=ZT[z.type],[n,i,flip]=zFrame(z);const[sx,sy,w,h,ax,ay]=T.meta.a[n][i];const k=T.H/T.meta.H;
-  ctx.save();ctx.translate(z.x,z.y+(z.z||0)+2);ctx.scale((z.face||1)*(flip?-1:1)*k,k);ctx.drawImage(T.img,sx,sy,w,h,-ax,-ay,w,h);ctx.restore();
+  ctx.save();ctx.translate(z.x,z.y+(z.z||0)+2+(z.jy||0));ctx.scale((z.face||1)*(flip?-1:1)*k,k);ctx.drawImage(T.img,sx,sy,w,h,-ax,-ay,w,h);ctx.restore();
 }
 const zSpr=z=>z.type&&ZT[z.type]&&ZT[z.type].ok;
 
@@ -1485,6 +1486,7 @@ function updZombie(z,dt){
   if(z.wasCalm&&(z.state==='investigate'||z.state==='chase')){z.alertT=.85;z.eating=false;z.wasCalm=false;
     if(z.type==='muffinek'&&z.state==='chase'&&!G.muffWarned&&Math.abs(z.x-player.x)<600){G.muffWarned=true;toast('Muffinek dostrzegł błąd. Twój.',2600)}}
   if(z.stair){updStair(z,dt,.75);return}
+  if(z.lunge){updLunge(z,dt);return}
   z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-player.x)<700)(z.eating?snd('zombie_je',z.x,.5):snd('zombie_jek',z.x,.6))||sfx('groan',z.x)}
   if(z.stagger>0){z.stagger-=dt;moveEnt(z,z.kb*dt);z.kb*=.88;z.moving=false;return}
   const p=player,vis=canSee(z),dist=Math.abs(p.x-z.x);
@@ -1505,7 +1507,8 @@ function updZombie(z,dt){
     case'wander':if(goTo(z,z.tx,z.tf,26*z.limp,dt)==='arrived'){z.state='idle';z.t=2+R()*5}break;
     case'investigate':{const r=goTo(z,z.tx,z.tf,58*z.limp,dt);if(r==='arrived'){z.look-=dt;z.moving=false;if((z.look*1.3|0)!==((z.look+dt)*1.3|0))z.face*=-1;if(z.look<=0){z.state='idle';z.t=3+R()*4;z.sus=Math.min(z.sus,.3)}}break}
     case'chase':{
-      const sp=(night?118:98)*(.85+z.limp*.2);
+      if(z.type==='kulejaca'&&lungeCheck(z,p,dt))break;
+      const sp=(night?118:98)*(.85+z.limp*.2)*(z.type==='kulejaca'?.42:1);
       if(z.f===p.f&&!p.stair&&!z.stair&&Math.abs(p.x-z.x)<44&&!p.dead&&!p.hidden){z.state='attack';z.atk=0;z.hitDone=false;z.face=Math.sign(p.x-z.x)||z.face;z.moving=false;break}
       const r=goTo(z,z.tx,z.tf,sp,dt);if(r==='arrived'&&z.lastSeen>1.2){z.state='investigate';z.look=3}
       break}
@@ -2412,7 +2415,7 @@ function spawnMerchant(){const dir=LVX.exitL?1:-1,mx=LVX.startX+dir*330;
 function drawMerchant(){if(!MER)return;const c=ctx,w=1198*AS,h=536*AS,car=AI('comp/'+(MER.dir>0?'auto_handlarza':'auto_handlarza_lewo'));
   c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(MER.carX,F[0]+8,w*.46,11,0,0,7);c.fill();dImg(car,MER.carX-w/2,F[0]+12-h,w,h);
   const S=sprOf('npc_handlarz');if(!S.ok)return;const p=player,near=p&&p.f===0&&Math.abs(p.x-MER.x)<190;if(p&&near)MER.face=p.x<MER.x?-1:1;
-  let n='idle',i=Math.floor(time*6)%8;if(mode==='trade'){n='trade';i=Math.min(7,Math.floor((time-MER.tt)*8))}else if(near){n='talk';i=Math.floor(time*7)%8}
+  let n='trade',i=0;if(mode==='trade'){i=Math.min(7,Math.floor((time-MER.tt)*8))}else if(near){i=[0,1,2,1][Math.floor(time*4)%4]}
   const L=S.meta.a[n]||S.meta.a.idle,[sx,sy,ww,hh,ax,ay]=L[i%L.length];c.save();c.translate(MER.x,F[0]+2);c.scale(MER.face*S.k,S.k);c.drawImage(S.img,sx,sy,ww,hh,-ax,-ay,ww,hh);c.restore()}
 const MSAY=['No proszę, ktoś żywy. Pokaż, co masz w plecaku.','Wszystko ma swoją cenę. Nawet w końcu świata.','Konserwy, bandaże, żelazo. Mów, czego trzeba.','Szybko, zanim zlecą się sąsiedzi.','Skąd to mam? Lepiej nie pytać.'];
 function openTrade(){if(!MER)return;hold.left=hold.right=hold.run=false;mode='trade';MER.tt=time;show('trade');$('trSay').textContent=pick(MSAY);renderTrade()}
@@ -2554,6 +2557,24 @@ function updComp(c,dt){if(!BL)return;const ai=c.ai||(c.ai={state:'pick',t:R()*2}
   if(ai.state==='do'){ai.t-=dt;if(c.sleep)c.ch.rest=Math.min(100,(c.ch.rest||0)+dt*.6);
     if(ai.t<=0){c.sleep=false;c.search=null;c.crA=0;ai.last=ai.act.k;ai.state='pick';ai.t=.6+R()*2.5}}}
 function compWake(c){if(!c)return;c.sleep=false;c.search=null;c.crA=0;c.ai=null}
+
+/* ================= KULEJĄCA: bardzo wolna, z bliska rzuca się skokiem ================= */
+ZT.kulejaca.sp=.5;ZT.kulejaca.sub='Wlecze się, a z bliska skacze';
+ZT.kulejaca.text='Kobieta w kwiecistej sukience i rozpinanym swetrze, z wykręconą nogą. Wlecze się bardzo wolno i łatwo ją zlekceważyć. Kiedy jednak podejdziesz na odległość skoku, odbija się z dobrej nogi i rzuca na ciebie z wyciągniętymi rękami. Nie stój przed nią, zachodź od tyłu. Krucha: zwykle wystarczą dwa porządne ciosy.';
+function lungeCheck(z,p,dt){z.lungeCD=(z.lungeCD||0)-dt;if(z.lungeCD>0)return false;
+  const d=p.x-z.x,ad=Math.abs(d);if(z.f!==p.f||p.stair||p.climb||p.hidden||p.dead||ad<85||ad>250||canSee(z)<=0)return false;
+  const dir=Math.sign(d),[l,r]=regionBounds(z.x,z.f);z.face=dir;z.moving=false;
+  z.lunge={t:0,x0:z.x,x1:clamp(p.x-dir*34,l+10,r-10),dir,hit:false};z.lungeCD=4.5+R()*2;snd('zombie_ryk',z.x,.9)||sfx('groan',z.x);return true}
+const LW=.42,LF=.4,LL=.55;
+function updLunge(z,dt){const L=z.lunge,p=player;L.t+=dt;z.moving=false;
+  if(L.t<LW){z.jy=0;return}
+  if(L.t<LW+LF){const u=(L.t-LW)/LF;z.x=lerp(L.x0,L.x1,1-(1-u)*(1-u));z.jy=-Math.sin(Math.PI*u)*44;
+    if(!L.hit&&u>.55&&z.f===p.f&&!p.stair&&!p.hidden&&!p.dead&&Math.abs(p.x-z.x)<56){L.hit=true;hurtPlayer(phase()>.6?22:18,z);p.x=clamp(p.x+L.dir*18,40,WORLD_W-40);shake=14}return}
+  z.jy=0;if(L.t>=LW+LF+LL){z.lunge=null;if(L.hit){z.state='attack';z.atk=.3;z.hitDone=true}else{z.stagger=.35;z.kb=0}}}
+function lungeFrame(z){const t=z.lunge.t;
+  if(t<LW)return['alert',Math.min(7,Math.floor(t/LW*8))];
+  if(t<LW+LF)return['attack',Math.min(4,2+Math.floor((t-LW)/LF*3))];
+  return['hit',Math.min(7,Math.floor((t-LW-LF)/LL*8))]}
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
