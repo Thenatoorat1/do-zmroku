@@ -1760,7 +1760,7 @@ function enterBase(){
 }
 function mkComp(ch,x){return{ch,x,f:0,y:F[0],face:1,walkP:0,moving:false,crA:0,z:-4,pal:{...ch.pal,long:ch.look.hair==='long'||ch.look.hair==='pony'}}}
 function switchChar(){syncChar();const old=player,nc=comp.ch;const nx=comp.x;
-  player=newPlayer(nc,G.storage);player.x=nx;player.face=old.face;comp=mkComp(old.ch,old.x);comp.face=-old.face;G.activeId=nc.id;
+  const nf=comp.f;player=newPlayer(nc,G.storage);player.x=nx;player.f=nf;player.y=F[nf];player.face=old.face;comp=mkComp(old.ch,old.x);comp.f=old.f;comp.y=F[old.f];comp.face=-old.face;comp.ai={state:'pick',t:3};G.activeId=nc.id;
   $('portrait').src=nc.portrait;$('hudName').textContent=nc.first;toast('Sterujesz: <b>'+esc(nc.first)+'</b>',1400)}
 function sleepNight(q){
   q=q||100;syncChar();const msgs=[];
@@ -2218,7 +2218,7 @@ function buildBaseL(){
   BL={b,fi,X,camMin:Math.min(...F)-viewH*.7,camMax:Math.max(bot+40-viewH,baseCamY)};
   for(let f=1;f<F.length;f++){const rs=d.rooms.filter(r=>fi(r.floorY)===f);if(!rs.length)continue;walls.push({x:X(Math.min(...rs.map(r=>r.x0)))-6,f},{x:X(Math.max(...rs.map(r=>r.x1)))+6,f})}
   for(const L of d.links){let a={x:L.fromX,y:L.fromY},c={x:L.toX,y:L.toY};if(a.y<c.y)[a,c]=[c,a];
-    if(L.type==='stairs')STAIRS.push({x0:X(a.x),f0:fi(a.y),x1:X(c.x),f1:fi(c.y),b,lu:'Wejdź schodami wyżej',ld:'Zejdź schodami niżej',dur:1.3});
+    if(L.type==='stairs'){const pth=basePath(d,d.links.indexOf(L),X,gY);STAIRS.push({x0:pth?pth[0][0]:X(a.x),f0:fi(a.y),x1:pth?pth[pth.length-1][0]:X(c.x),f1:fi(c.y),b,lu:'Wejdź schodami wyżej',ld:'Zejdź schodami niżej',dur:1.3,path:pth})}
     else{climbs.push({kind:'ladder',x0:X(a.x),f0:fi(a.y),x1:X(c.x),f1:fi(c.y),up:L.type==='hatch_ladder'?'Wyjdź przez właz':'Wejdź po drabinie',down:'Zejdź po drabinie',noise:0,inside:b});P('inladder',X(a.x),fi(a.y),{top:F[fi(c.y)]+10})}}
   for(const r of d.rooms){if(r.kind==='stairwell'||r.kind==='outdoor')continue;const f=fi(r.floorY);const l={x:X((r.x0+r.x1)/2),y:F[f]-235,r:Math.max(280,(r.x1-r.x0)*AS*.62),i:.62,b,f,flick:r.kind==='basement'?1:0};lamps.push(l)}
   baseSpots=[];
@@ -2326,6 +2326,7 @@ function sprFrame(e,S){
   const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
   const loop=(sp)=>Math.floor(e.walkP*sp)%8;
   const has=n=>S&&S.meta.a[n];
+  if(e.sleep)return['death',7];
   if(e.dead)return['death',by((e.deadT||0)/1.1,8)];
   if(e.fallJ)return['jump_grab',2];
   if(e.kill){const t=e.kill.t;if(t<.6)return['kick',by(t/.6,8)];if(t<1)return['walk',loop(1.27)];return['finish',by(((t-1)%.5)/.5,8)]}
@@ -2342,7 +2343,8 @@ function sprFrame(e,S){
 }
 function drawSprite(e,S){S=S||SPR;
   const[name,i]=sprFrame(e,S);const L=S.meta.a[name]||S.meta.a.walk;const[sx,sy,w,h,ax,ay]=L[i%L.length];const k=S.k||158/S.H;
-  ctx.save();ctx.translate(e.x,e.y+(e.z||0)+2);ctx.scale((e.face||1)*k,k);ctx.drawImage(S.img,sx,sy,w,h,-ax,-ay,w,h);ctx.restore();
+  ctx.save();ctx.translate(e.x,e.y+(e.z||0)+2-(e.sleep?18:0));ctx.scale((e.face||1)*k,k);ctx.drawImage(S.img,sx,sy,w,h,-ax,-ay,w,h);ctx.restore();
+  if(e.sleep){ctx.fillStyle='rgba(235,227,210,.75)';ctx.font='700 16px "Crimson Pro",Georgia,serif';ctx.textAlign='center';for(let j=0;j<3;j++){const t=(time*.5+j/3)%1;ctx.globalAlpha=Math.sin(t*Math.PI)*.8;ctx.fillText('z',e.x+18+t*26,e.y-50-t*44);}ctx.globalAlpha=1}
 }
 /* nowe bronie z puli */
 Object.assign(WP,{patelnia:{n:'Patelnia żeliwna',dmg:1.3,reach:50,noise:300,dur:14,kb:120,melee:true},tasak:{n:'Tasak',dmg:1.6,reach:50,noise:190,dur:10,kb:50,melee:true},
@@ -2505,6 +2507,54 @@ function drawKitHoles(b){const st=b.stair;if(!st)return;const c=ctx,f=st.flip,X=
 function drawKitSlab(b){if(b.floors<2)return;const c=ctx,y0=F[1]+10,y1=RTOP(0)+52;c.save();c.beginPath();c.rect(b.x0,y0,b.x1-b.x0,y1-y0);c.clip();
   drawRoom(b.rooms[0],b.x0,b.n,0);drawRoom(b.rooms[1],b.x0,b.n,1);c.fillStyle='rgba(0,0,0,.18)';c.fillRect(b.x0,y0,b.x1-b.x0,y1-y0);c.restore()}
 
+/* ================= SCHODY ŁAMANE I ŻYCIE TOWARZYSZA W KRYJÓWCE ================= */
+/* schody po trasie z punktów (dół → spocznik → góra), w pikselach grafiki bazy */
+const BSTAIR={kostka:{0:[[1530,2691],[2085,2266],[1740,1949]],1:[[1385,1949],[2035,1476],[1715,1186]]}};
+function startStair(e,st,up){
+  if(st.path){const pts=up?st.path:st.path.slice().reverse();const seg=[];let L=0;
+    for(let i=1;i<pts.length;i++){const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(l);L+=l}
+    e.stair={t:0,dur:L/(up?86:100),pts,seg,L,tf:up?st.f1:st.f0};e.x=pts[0][0];e.crouch=false;return}
+  e.stair={t:0,dur:(up?1.35:1.15)*(st.dur||1),fx:e.x,fy:F[e.f],tx:up?st.x1:st.x0,ty:F[up?st.f1:st.f0],tf:up?st.f1:st.f0};e.face=Math.sign(e.stair.tx-e.stair.fx)||e.face;e.crouch=false}
+function updStair(e,dt,mul){const s=e.stair;s.t+=dt*mul/s.dur;const k=clamp(s.t,0,1);e.walkP+=dt*8*mul;e.moving=true;
+  if(s.pts){let d=k*s.L,i=0;while(i<s.seg.length-1&&d>s.seg[i]){d-=s.seg[i];i++}const a=s.pts[i],b=s.pts[i+1],u=s.seg[i]?Math.min(1,d/s.seg[i]):1;
+    e.x=lerp(a[0],b[0],u);e.y=lerp(a[1],b[1],u);e.face=Math.sign(b[0]-a[0])||e.face;if(s.t>=1){e.f=s.tf;e.y=F[e.f];e.x=s.pts[s.pts.length-1][0];e.stair=null}return}
+  e.x=lerp(s.fx,s.tx,k);e.y=lerp(s.fy,s.ty,k);if(s.t>=1){e.f=s.tf;e.y=F[e.f];e.stair=null}}
+function basePath(d,li,X,gY){const P=(BSTAIR[d.id]||{})[li];if(!P)return null;
+  return P.map(([x,y],i)=>[X(x),i===0||i===P.length-1?600+(y-gY)*AS:600+(y-gY)*AS+8])}
+
+/* towarzysz w kryjówce: sam wybiera zajęcia */
+function compActs(){const d=BL.b.def,st=bState(),X=BL.X,fi=BL.fi,A=[];
+  for(const s of d.slots){const id=st.objs[s.id],o=id&&BOBJ[id];if(!o)continue;const x=X((s.x0+s.x1)/2),f=fi(s.floorY);
+    if(o.bed)A.push({k:'sleep',x,f,w:1,dur:[16,26]});
+    else if(o.st==='piecyk'||o.st==='ognisko')A.push({k:'cook',x:x+40,f,w:2.2,dur:[6,10],face:-1});
+    else if(o.st)A.push({k:'work',x:x-30,f,w:2,dur:[6,11],face:1});
+    else if(o.t==='storage')A.push({k:'rummage',x,f,w:1.4,dur:[4,7]});
+    else if(o.rest)A.push({k:'sit',x,f,w:2,dur:[8,14]})}
+  for(const r of d.rooms){if(r.kind==='stairwell'||r.kind==='outdoor')continue;const f=fi(r.floorY);
+    if(r.kind!=='basement'){A.push({k:'window',x:X(r.x0)+70,f,face:-1,w:.9,dur:[5,9]});A.push({k:'window',x:X(r.x1)-70,f,face:1,w:.9,dur:[5,9]})}
+    A.push({k:'wander',x:X(r.x0+80+(r.x1-r.x0-160)*Math.random()),f,w:1.3,dur:[1.5,4]});A.push({k:'sit',x:X(r.x0+120+(r.x1-r.x0-240)*Math.random()),f,w:.5,dur:[6,10]})}
+  return A}
+function stairRoute(f0,f1){if(f0===f1)return[];const q=[[f0,[]]],seen=new Set([f0]);
+  while(q.length){const[f,r]=q.shift();for(const st of STAIRS){let nf=null,up;if(st.f0===f){nf=st.f1;up=true}else if(st.f1===f){nf=st.f0;up=false}
+    if(nf==null||seen.has(nf))continue;const rr=[...r,{st,up}];if(nf===f1)return rr;seen.add(nf);q.push([nf,rr])}}return null}
+const CSAY={sleep:'śpi',cook:'gotuje',work:'majsterkuje',rummage:'przegląda zapasy',sit:'odpoczywa',window:'wygląda przez okno',drink:'pije'};
+function pickCompAct(c){const A=compActs(),ch=c.ch,tired=(ch.rest||0)<55;let tot=0;
+  const W=A.map(a=>{let w=a.w;if(a.k==='sleep')w=tired?8:(ch.rest<80?.6:.05);if(c.ai&&c.ai.last===a.k)w*=.25;if(!stairRoute(c.f,a.f))w=0;tot+=w;return w});
+  if(R()<.08)return{k:'drink',x:c.x,f:c.f,dur:[1.4,1.4]};let r=R()*tot;for(let i=0;i<A.length;i++){if((r-=W[i])<0)return A[i]}return A[0]}
+function updComp(c,dt){if(!BL)return;const ai=c.ai||(c.ai={state:'pick',t:R()*2});c.moving=false;
+  if(c.stair){updStair(c,dt,1);return}
+  if(c.drinkT>0)c.drinkT-=dt;
+  if(ai.state==='pick'){ai.t-=dt;if(ai.t>0)return;ai.act=pickCompAct(c);ai.route=stairRoute(c.f,ai.act.f)||[];ai.state='go'}
+  if(ai.state==='go'){let tx,step=ai.route[0];if(step)tx=step.up?step.st.x0:step.st.x1;else tx=ai.act.x;
+    const dx=tx-c.x;if(Math.abs(dx)>4){const v=Math.min(Math.abs(dx),dt*68);c.x+=Math.sign(dx)*v;c.face=Math.sign(dx);c.moving=true;c.walkP+=dt*7.5;return}
+    if(step){ai.route.shift();startStair(c,step.st,step.up);return}
+    const a=ai.act;ai.state='do';ai.t=a.dur[0]+R()*(a.dur[1]-a.dur[0]);if(a.face)c.face=a.face;
+    if(a.k==='sleep'){c.sleep=true}else if(a.k==='cook'||a.k==='rummage')c.search={c:null};else if(a.k==='work')c.search={c:{tall:true}};else if(a.k==='sit')c.crA=1;else if(a.k==='drink')c.drinkT=1.3;
+    if(a.k!=='wander'&&player&&Math.abs(player.x-c.x)<500&&player.f===c.f&&R()<.5)toast(esc(c.ch.first)+' '+CSAY[a.k],1600);return}
+  if(ai.state==='do'){ai.t-=dt;if(c.sleep)c.ch.rest=Math.min(100,(c.ch.rest||0)+dt*.6);
+    if(ai.t<=0){c.sleep=false;c.search=null;c.crA=0;ai.last=ai.act.k;ai.state='pick';ai.t=.6+R()*2.5}}}
+function compWake(c){if(!c)return;c.sleep=false;c.search=null;c.crA=0;c.ai=null}
+
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
 function launchRaid(){G.muffWarned=false;
@@ -2569,6 +2619,7 @@ function update(dt){
   if(!G.inBase){clock+=dt*2;updTraps()}
   updEdges();
   updPlayer(dt);
+  if(G.inBase&&comp)updComp(comp,dt);
   for(const z of zombies)updZombie(z,dt);
   for(const b of B)if(!b.revealed&&(doors.some(d=>d.b===b&&d.open)||wins.some(w=>w.b===b&&w.open)||(!player.climb&&bAt(player.x,player.f)===b))){b.revealed=true}
   updParts(dt);
