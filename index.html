@@ -2390,6 +2390,10 @@ function sprSet(e){const ch=e&&e.ch;if(!ch)return null;if(ch.spr){const s=sprOf(
 function sprFrame(e,S){
   const by=(t,n)=>Math.min(n-1,Math.max(0,Math.floor(t*n)));
   const loop=(sp)=>Math.floor(e.walkP*sp)%8;
+  /* postacie z puli: klatka chodu liczona z przebytej drogi (cykl 8 klatek = dwa kroki), więc stopy nie ślizgają się przy żadnej prędkości */
+  if(S&&S!==SPR&&e.moving&&!e.climb&&!e.kill&&!(e.atk>0)&&!(e.hurt>0&&e.hurt<.3)&&!e.search&&!e.peek&&!e.hidden&&!(e.drinkT>0)&&!(e.bandage>0)){
+    const cyc=(e.crA||0)>.5||e.crouch?100:e.run?232:138,i=Math.floor((e.dist||0)/cyc*8)%8;
+    return[(e.crA||0)>.5||e.crouch?'sneak':e.run?'run':'walk',i]}
   const has=n=>S&&S.meta.a[n];
   if(e.sleep)return['death',7];
   if(e.dead)return['death',by((e.deadT||0)/1.1,8)];
@@ -2407,6 +2411,7 @@ function sprFrame(e,S){
   return has('idle')?['idle',Math.floor((time+(e.ch?e.ch.id:0)*.37)*6)%8]:['walk',0];
 }
 function drawSprite(e,S){S=S||SPR;
+  if(e._lx!=null){const dx=e.x-e._lx,dy=e.y-e._ly;if(Math.abs(dx)<60&&Math.abs(dy)<60)e.dist=(e.dist||0)+Math.hypot(dx,dy*.6)}e._lx=e.x;e._ly=e.y;
   const[name,i]=sprFrame(e,S);const L=S.meta.a[name]||S.meta.a.walk;const[sx,sy,w,h,ax,ay]=L[i%L.length];const k=S.k||158/S.H;
   ctx.save();ctx.translate(e.x,e.y+(e.z||0)+2-(e.sleep?18:0));ctx.scale((e.face||1)*k,k);ctx.drawImage(S.img,sx,sy,w,h,-ax,-ay,w,h);ctx.restore();
   if(e.sleep){ctx.fillStyle='rgba(235,227,210,.75)';ctx.font='700 16px "Crimson Pro",Georgia,serif';ctx.textAlign='center';for(let j=0;j<3;j++){const t=(time*.5+j/3)%1;ctx.globalAlpha=Math.sin(t*Math.PI)*.8;ctx.fillText('z',e.x+18+t*26,e.y-50-t*44);}ctx.globalAlpha=1}
