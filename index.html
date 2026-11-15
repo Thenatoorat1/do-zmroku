@@ -303,9 +303,15 @@ body.touch .keys{display:none}
 /* touch */
 #touch{position:absolute;inset:0;pointer-events:none}
 #touch .pad{position:absolute;left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;pointer-events:auto}
-#touch .acts{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(3,auto);gap:8px;pointer-events:auto;align-items:end}
+#touch .acts{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:236px;height:156px;pointer-events:none}
+#touch .acts .tb{position:absolute;pointer-events:auto}
+#touch .util{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));top:calc(188px + env(safe-area-inset-top,0px));display:flex;gap:8px;pointer-events:auto}
+.b-atk{right:0;bottom:0}.b-run{right:92px;bottom:0}.b-sk{right:172px;bottom:4px}.b-ak{right:12px;bottom:94px}.b-a2{right:84px;bottom:98px}
 .tb{appearance:none;width:64px;height:64px;border-radius:50%;border:1px solid rgba(235,227,210,.3);background:rgba(10,10,11,.55);color:var(--bone);font:700 12px var(--ui);letter-spacing:.06em;text-transform:uppercase;touch-action:none;-webkit-tap-highlight-color:transparent}
-.tb.dir{width:78px;height:78px;font-size:26px}
+.tb.dir{width:68px;height:68px;font-size:22px}
+.tb.sm{width:44px;height:44px;font-size:9px;letter-spacing:.02em}
+.tb.mid{width:56px;height:56px;font-size:10px;letter-spacing:.03em}
+#touch .tb.big{width:76px;height:76px;font-size:13px}#touch .tb.big.b-run{width:66px;height:66px;bottom:5px}
 .tb.big{width:80px;height:80px;font-size:14px}
 .tb.red{background:rgba(150,35,25,.6)}
 .tb.on,.tb:active{background:rgba(214,162,58,.55);color:#111}
@@ -313,8 +319,8 @@ body.touch #char{top:calc(62px + env(safe-area-inset-top,0px));bottom:auto;align
 body.touch #portrait{width:50px;height:58px}
 body.touch #char .info{width:min(220px,30vw)}
 body.touch #weapon{bottom:auto;top:calc(150px + env(safe-area-inset-top,0px))}
-body.touch #tip{top:auto;bottom:calc(110px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);font-size:14px}
-body.touch #toasts{bottom:auto;top:calc(80px + env(safe-area-inset-top,0px))}
+body.touch #tip{top:calc(8px + env(safe-area-inset-top,0px));max-width:min(340px,36vw);padding:6px 10px;bottom:auto;--old:calc(110px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);font-size:12px}
+body.touch #toasts{bottom:auto;top:calc(96px + env(safe-area-inset-top,0px))}
 body.touch #banner{top:calc(70px + env(safe-area-inset-top,0px))}
 body.touch .hide-touch{display:none}
 #rotate{position:absolute;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center;font:700 30px var(--display);padding:30px;z-index:200}
@@ -356,15 +362,17 @@ body.touch .hide-touch{display:none}
       <button class="tb dir" data-hold="left" aria-label="W lewo">◀</button>
       <button class="tb dir" data-hold="right" aria-label="W prawo">▶</button>
     </div>
+    <div class="util">
+      <button class="tb sm b-inv" data-press="inv" aria-label="Plecak">Plecak</button>
+      <button class="tb sm b-swap" data-press="swap" aria-label="Zmień broń">Broń</button>
+      <button class="tb sm b-band" data-press="bandage" aria-label="Bandaż">Bandaż</button>
+    </div>
     <div class="acts">
-      <button class="tb" data-press="inv">Plecak</button>
-      <button class="tb" data-press="swap">Broń</button>
-      <button class="tb" data-press="bandage">Bandaż</button>
-      <button class="tb" id="tbCrouch" data-press="crouch">Skradaj</button>
-      <button class="tb" data-hold="run">Bieg</button>
-      <button class="tb big" data-press="interact">Akcja</button>
-      <span></span><button class="tb" data-press="interact2">Akcja 2</button>
-      <button class="tb big red" data-press="attack">Atak</button>
+      <button class="tb mid b-a2" data-press="interact2" aria-label="Akcja 2">Akcja 2</button>
+      <button class="tb mid b-ak" data-press="interact" aria-label="Akcja">Akcja</button>
+      <button class="tb mid b-sk" id="tbCrouch" data-press="crouch" aria-label="Skradaj się">Skradaj</button>
+      <button class="tb big b-run" data-hold="run" aria-label="Bieg">Bieg</button>
+      <button class="tb big red b-atk" data-press="attack" aria-label="Atak">Atak</button>
     </div>
   </div>
 
@@ -1168,7 +1176,7 @@ function C(t,x,f,name,dur,loot,o={}){const sz=o.size||({dumpster:[5,3],shelf:[4,
   const c={t,x,f,name,dur,loot,searched:false,grid:null,size:sz,tall:!!o.tall};containers.push(c);P(t,x,f,{c,...o});return c}
 function HD(t,x,f,name,o={}){const h={x,f,name};hides.push(h);P(t,x,f,{h,front:true,...o});return h}
 let climbs=[],wins=[];
-function resetLevel(){B=[];walls=[];doors=[];props=[];containers=[];hides=[];lamps=[];decals=[];parts=[];rings=[];STAIR=null;STAIRS=[];uses=[];traps=[];BL=null;BGP=[];MER=null;zombies=[];climbs=[];wins=[];F=[600,284]}
+function resetLevel(){BGF={};B=[];walls=[];doors=[];props=[];containers=[];hides=[];lamps=[];decals=[];parts=[];rings=[];STAIR=null;STAIRS=[];uses=[];traps=[];BL=null;BGP=[];MER=null;zombies=[];climbs=[];wins=[];F=[600,284]}
 function addRoof(b){F.push(b.top);b.roofF=F.length-1;return b.roofF}
 function roofB(f){return f>=2?B.find(b=>b.roofF===f):null}
 function garageB(x0,kind){
@@ -1945,7 +1953,7 @@ function kitB(x0,o){
     if(r()<.6)P('kpart',x0+w*(.15+r()*.2),rf,{id:r()<.5?'antenna':'chimney'});
     if(r()<.45)C('roofbox',x0+w*.82,rf,'Skrzynia na dachu',1.8,[['zlom',.6,1,2],['tasma',.4,1,2],['rope',.3,1,1],['woda',.4,1,1]]);
   }
-  for(let f=0;f<fl;f++)for(const t of[.28,.72]){const lx=x0+w*t;if(occ[f].some(z=>lx>z[0]-20&&lx<z[1]+20))continue;
+  for(let f=0;f<fl;f++)for(const t of[.28,.72]){const lx=x0+w*t;
     const l={x:lx,y:F[f]-218,r:250,i:.55,b,f,flick:r()<.3?1:0};lamps.push(l);P('klamp',lx,f,{l})}
   for(let f=0;f<fl;f++){const list=ROOMFILL[o.rooms[f]].slice();for(let i=list.length-1;i>0;i--){const j=(r()*(i+1))|0;[list[i],list[j]]=[list[j],list[i]]}
     let cx=x0+72,wx=x0+90;const end=b.x1-72;
@@ -1979,17 +1987,17 @@ function drawKitFacade(b){
     if(f===0&&b.kind==='shop')dPart('window_shop',(b.x0+b.x1)/2,F[0]-2,{k:.85});
     else{const nW=Math.max(1,b.n-(f===0&&b.kind==='garage'?1:0)),a=b.x0+150,z=b.x1-150;
       if(f===0&&b.kind==='garage')dPart('door_garage_roll',b.x0+w*.62,F[0]+16,{k:.9});
-      for(let i=0;i<nW;i++){const wx=nW===1?(a+z)/2:lerp(a,z,i/(nW-1));if(f===0&&b.kind==='garage'&&Math.abs(wx-(b.x0+w*.62))<120)continue;dPart(b.win,wx,F[f]-58+FDY,{k:.82})}}}
-  /* wejścia z nowymi drzwiami są tylko na krawędziach: po prawej grafika, po lewej jej lustrzane odbicie */
-  if(b.door){}else{dPart(b.ent,b.x0+50,F[0]+16,{k:.78});dPart(b.ent,b.x1-50,F[0]+16,{k:.78})}
+      for(let i=0;i<nW;i++){const wx=nW===1?(a+z)/2:lerp(a,z,i/(nW-1));if(f===0&&b.kind==='garage'&&Math.abs(wx-(b.x0+w*.62))<120)continue;if(f===0&&b.fx&&Math.abs(wx-b.fx)<60)continue;dPart(b.win,wx,F[f]-58+FDY,{k:.82})}}}
+  /* wejścia z nowymi drzwiami są tylko na krawędziach: po prawej grafika, po lewej jej lustrzane odbicie; budynek w tle ma drzwi od frontu */
+  if(b.door){if(b.bg)drawDoorFront(b,b.fx)}else{dPart(b.ent,b.x0+50,F[0]+16,{k:.78});dPart(b.ent,b.x1-50,F[0]+16,{k:.78})}
   if(b.sign){const sx=(b.x0+b.x1)/2,sy=RTOP(0)+40;c.font='700 22px "Crimson Pro",Georgia,serif';const tw=c.measureText(b.sign).width+36;
     c.fillStyle='#d7cfbb';c.fillRect(sx-tw/2,sy-24,tw,34);c.fillStyle='#8a2a20';c.textAlign='center';c.fillText(b.sign,sx,sy)}
 }
-function drawKitFront(b){const c=ctx,w=b.x1-b.x0;c.fillStyle='#0b0b0c';
+function drawKitFront(b){if(b.bg&&!b.revealed)return;const c=ctx,w=b.x1-b.x0;c.fillStyle='#0b0b0c';
   c.fillRect(b.x0-12,b.top-4,w+24,10);
   if(b.revealed||(player&&player.peek&&player.peek.b===b))for(let f=1;f<b.floors;f++){const st=b.stair;if(st&&st.D&&st.f1===f){c.fillRect(b.x0-12,F[f]+11+FDY,st.hx0-b.x0+12,8);c.fillRect(st.hx1,F[f]+11+FDY,b.x1-st.hx1+12,8)}else c.fillRect(b.x0-12,F[f]+11+FDY,w+24,8)}
   for(const x of[b.x0,b.x1])for(let f=0;f<b.floors;f++){const y0=RTOP(f),y1=F[f]+17+FDY;
-    if(b.door){if(f>0)drawWallStrip(b,x,f);continue}
+    if(b.door){if(f>0||b.bg)drawWallStrip(b,x,f);continue}
     if(f===0){c.fillRect(x-12,y0,24,F[0]-216-y0)}
     else{const wn=wins.find(q=>q.b===b&&q.f===f&&q.x===x);if(wn){c.fillRect(x-12,y0,24,F[f]-188+FDY-y0);c.fillRect(x-12,F[f]-52+FDY,24,y1-F[f]+52-FDY)}else c.fillRect(x-12,y0,24,y1-y0)}}
   for(const wn of wins)if(wn.b===b){c.fillStyle=wn.open?'#121314':'rgba(170,190,196,.72)';c.fillRect(wn.x-7,F[wn.f]-186+FDY,14,134)}
@@ -2088,7 +2096,8 @@ function genLevel(poi){
     const fo=forced.length&&built>=(forced.at0||0)?forced.shift():null;
     if(!fo&&T.deco&&r()<.12){const id=rp(T.deco),w=KP[id].width*AS;P('kdeco',x+w/2,0,{id});x+=w+60;continue}
     const two=fo?fo.rooms.length>1:r()<T.two,rooms=fo?fo.rooms:two?rp(T.r2):rp(T.r1),n=fo&&fo.n||(two?3+(r()<.5?1:0):2+(r()<.6?1:0));
-    const b=kitB(x,{rooms,n,tex:fo&&fo.tex||rp(T.tex),roof:fo&&fo.roof||(two?rp(T.roof2):rp(T.roof1)),rnd:r,sign:fo&&fo.sign||SIGNS[rooms[0]]||null,win:L.id==='srodmiescie'&&r()<.5?'window_old':r()<.25?'window_boarded':r()<.3?'window_pvc_broken':'window_pvc',door:rooms[0]==='hall'||rooms[0]==='garage'?'door_steel':rooms[0]==='shop'?'door_glass_double':'door_wood'});
+    const _mk=bgMark();const b=kitB(x,{rooms,n,tex:fo&&fo.tex||rp(T.tex),roof:fo&&fo.roof||(two?rp(T.roof2):rp(T.roof1)),rnd:r,sign:fo&&fo.sign||SIGNS[rooms[0]]||null,win:L.id==='srodmiescie'&&r()<.5?'window_old':r()<.25?'window_boarded':r()<.3?'window_pvc_broken':'window_pvc',door:rooms[0]==='hall'||rooms[0]==='garage'?'door_steel':rooms[0]==='shop'?'door_glass_double':'door_wood'});
+    if(!fo&&r()<(B.some(q=>q.bg)?.3:.5))makeFront(b,_mk,r);
     for(const z of b.zs)if(r()<.55+dz*.15)zs.push(z);
     if(r()<.4)zs.push([b.x0+(b.x1-b.x0)*r(),0,r()<.5?1:-1]);
     built++;x=b.x1+110+r()*60}
@@ -2905,6 +2914,38 @@ function drawPeekCone(s){const pk=player.peek,d=pk.d,b=d.b,dir=d.x===b.x0?1:-1,m
   c.fillStyle='#ebe3d2';c.font=`600 ${Math.round(15*dpr)}px "Barlow Semi Condensed",Arial,sans-serif`;c.textAlign='center';
   c.fillText((mail?'Otwór na listy':'Dziurka od klucza')+' · ruch albo E kończy',cv.width/2,cv.height-30*dpr)}
 
+/* ================= BUDYNKI Z WEJŚCIEM OD FRONTU: stoją w tle, wchodzi się i wychodzi tylko drzwiami frontowymi ================= */
+/* wnętrze dostaje własne numery pięter (te same wysokości co parter i piętro), więc ulica i środek się nie mieszają */
+let BGF={};
+function bgMark(){return{d:doors.length,w:walls.length,s:STAIRS.length,wi:wins.length,c:climbs.length,p:props.length,cn:containers.length,h:hides.length,l:lamps.length}}
+function makeFront(b,m,r){const fA=F.length;F.push(F[0]);const fB=F.length;F.push(F[1]);const fm=f=>f===0?fA:f===1?fB:f;
+  b.bg=true;b.fA=fA;b.fB=fB;BGF[fA]=b;BGF[fB]=b;
+  doors.splice(m.d,doors.length-m.d);
+  for(let i=m.w;i<walls.length;i++)walls[i].f=fm(walls[i].f);walls.push({x:b.x0,f:fA},{x:b.x1,f:fA});
+  for(let i=m.s;i<STAIRS.length;i++){STAIRS[i].f0=fm(STAIRS[i].f0);STAIRS[i].f1=fm(STAIRS[i].f1)}
+  wins.splice(m.wi,wins.length-m.wi);climbs.splice(m.c,climbs.length-m.c);
+  for(let i=props.length-1;i>=m.p;i--){const p=props[i];if(p.t==='kpipe'||p.t==='kladder'||p.t==='inladder'){props.splice(i,1);continue}if(p.f===0||p.f===1)p.f=fm(p.f)}
+  for(let i=m.cn;i<containers.length;i++){const c=containers[i];if(c.f===0||c.f===1)c.f=fm(c.f)}
+  for(let i=m.h;i<hides.length;i++)hides[i].f=fm(hides[i].f);
+  for(let i=m.l;i<lamps.length;i++)lamps[i].f=fm(lamps[i].f);
+  for(const z of b.zs)z[1]=fm(z[1]);
+  /* drzwi frontowe w miejscu jednego z okien parteru */
+  const w=b.x1-b.x0;let fx;
+  if(b.kind==='shop')fx=b.x0+100;else{const nW=Math.max(1,b.n-(b.kind==='garage'?1:0)),a=b.x0+150,z=b.x1-150;const xs=[];
+    for(let i=0;i<nW;i++){const wx=nW===1?(a+z)/2:lerp(a,z,i/(nW-1));if(b.kind==='garage'&&Math.abs(wx-(b.x0+w*.62))<120)continue;xs.push(wx)}
+    fx=xs.length?xs[Math.floor(r()*xs.length)]:b.x0+110}
+  b.fx=fx;
+  uses.push({x:fx,f:0,r:46,label:'Wejdź frontowymi drzwiami',act:()=>enterFront(b)},{x:fx,f:fA,r:46,label:'Wyjdź frontowymi drzwiami',act:()=>exitFront(b)})}
+function enterFront(b){const p=player;p.hidden=null;p.search=null;p.crouch=false;p.f=b.fA;p.y=F[b.fA];p.x=b.fx;b.revealed=true;sfx('door',p.x);emitNoise(p.x,b.fA,120,'door')}
+function exitFront(b){const p=player;p.hidden=null;p.search=null;p.f=0;p.y=F[0];p.x=b.fx;b.revealed=false;sfx('door',p.x);emitNoise(p.x,0,120,'door')}
+bAt=(function(_b){return function(x,f){if(BGF[f]){const b=BGF[f];return x>b.x0&&x<b.x1?b:null}for(const b of B){if(b.bg)continue;if(x>b.x0&&x<b.x1&&f<b.floors)return b}return null}})(bAt);
+const playerBg=()=>player&&BGF[player.f]||null;
+/* co widać: wnętrze tylko ze środka, ulica przed takim budynkiem znika, gdy jesteś w środku */
+function layerVis(e){const b=BGF[e.f];if(b)return b.revealed&&playerBg()===b;const pb=playerBg();if(pb&&e.x>pb.x0-10&&e.x<pb.x1+10)return false;return true}
+inView=(function(_v){return function(p){if(p&&p.f!=null&&!layerVis(p))return false;return _v(p)}})(inView);
+function drawFrontExit(b){if(!b.revealed)return;const fw=DOORDEF[b.door][1]*AS,fh=633*AS,c=ctx;c.save();c.globalAlpha=.22;dImg(AI('doors/'+b.door+'_front'),b.fx-fw/2,F[0]+FDY+2-fh,fw,fh,false);c.restore();
+  const g=c.createRadialGradient(b.fx,F[0]+10,4,b.fx,F[0]+10,70);g.addColorStop(0,'rgba(255,230,180,.22)');g.addColorStop(1,'rgba(255,230,180,0)');c.fillStyle=g;c.fillRect(b.fx-70,F[0]-40,140,70)}
+
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
 function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];PROJ=[];CLOUD=[];
@@ -3218,7 +3259,7 @@ function drawBuildingsBack(){
   const pkB=player&&player.peek?player.peek.b:null;
   for(const b of B){if(b.x1<camX-60||b.x0>camX+viewW+60)continue;const w=b.x1-b.x0;
     if(b.base){drawBaseImg(b);continue}
-    if(b.kit){if(b.revealed||b===pkB)drawKitRooms(b);drawKitRoof(b);continue}
+    if(b.kit){if(b.revealed||b===pkB)drawKitRooms(b);if(b.bg&&!b.revealed)drawKitFacade(b);if(b.bg)drawFrontExit(b);drawKitRoof(b);continue}
     if(b.floors===1){
       const t=b.top+24;let g=c.createLinearGradient(0,t,0,575);g.addColorStop(0,b.wall[0]);g.addColorStop(1,b.wall[1]);c.fillStyle=g;c.fillRect(b.x0,t,w,575-t);
       c.fillStyle='rgba(0,0,0,.12)';for(let x=b.x0+60;x<b.x1;x+=95)c.fillRect(x,t,3,575-t);
@@ -3374,13 +3415,13 @@ function render(){
   for(const p of props)if(p.decal&&inView(p))drawProp(p);
   for(const p of props)if(!p.front&&!p.decal&&p.t!=='trunk'&&inView(p))drawProp(p);
   drawDecals();
-  const ents=[];for(const z of zombies)if(Math.abs(z.x-camX-viewW/2)<viewW*.7)ents.push([z,true]);if(player&&(mode==='play'||mode==='inv'||mode==='pause'||mode==='craft'))ents.push([player,false]);if(G&&G.inBase&&comp)ents.push([comp,false]);
+  const ents=[];for(const z of zombies)if(Math.abs(z.x-camX-viewW/2)<viewW*.7&&layerVis(z))ents.push([z,true]);if(player&&(mode==='play'||mode==='inv'||mode==='pause'||mode==='craft'))ents.push([player,false]);if(G&&G.inBase&&comp)ents.push([comp,false]);
   ents.sort((a,b)=>(a[0].dead?-1:0)-(b[0].dead?-1:0)||(a[0].y+(a[0].z||0))-(b[0].y+(b[0].z||0)));
   for(const[e,z]of ents)drawEntity(e,z);
   drawMuffFx();drawWeaponsFx();
   for(const p of props)if((p.front||p.t==='trunk')&&inView(p))drawProp(p);
   const peekB=player&&player.peek&&mode!=='menu'?player.peek.b:null;
-  for(const b of B)if(!b.revealed&&b!==peekB&&b.x1>camX-60&&b.x0<camX+viewW+60)drawFacade(b);
+  for(const b of B)if(!b.revealed&&!b.bg&&b!==peekB&&b.x1>camX-60&&b.x0<camX+viewW+60)drawFacade(b);
   drawBuildingsFront();drawShafts();
   renderLight();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(lightCv,0,0,lightCv.width,lightCv.height,sx*s,sy*s,cv.width,cv.height);
   ctx.setTransform(s,0,0,s,(-camX+sx)*s,(-camY+sy)*s);drawOverlays();
