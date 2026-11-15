@@ -323,6 +323,22 @@ body.touch #tip{top:calc(8px + env(safe-area-inset-top,0px));max-width:min(340px
 body.touch #toasts{bottom:auto;top:calc(96px + env(safe-area-inset-top,0px))}
 body.touch #banner{top:calc(70px + env(safe-area-inset-top,0px))}
 body.touch .hide-touch{display:none}
+/* przyciski z grafikami */
+#touch .tb{border:0;border-radius:50%;background:transparent center/contain no-repeat;font-size:0;color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.45)}
+#touch .tb.red{background-color:transparent}
+#touch .tb.b-atk{background-image:url(a/ui/btn_atak.webp)}#touch .tb.b-atk:active,#touch .tb.b-atk.on{background-image:url(a/ui/btn_atak_wcisniety.webp)}
+#touch .tb.b-run{background-image:url(a/ui/btn_bieg.webp)}#touch .tb.b-run:active,#touch .tb.b-run.on{background-image:url(a/ui/btn_bieg_wcisniety.webp)}
+#touch .tb.b-ak{background-image:url(a/ui/btn_akcja.webp)}#touch .tb.b-ak:active,#touch .tb.b-ak.on{background-image:url(a/ui/btn_akcja_wcisniety.webp)}
+#touch .tb.b-a2{background-image:url(a/ui/btn_akcja2.webp)}#touch .tb.b-a2:active,#touch .tb.b-a2.on{background-image:url(a/ui/btn_akcja2_wcisniety.webp)}
+#touch .tb.b-sk{background-image:url(a/ui/btn_skradaj.webp)}#touch .tb.b-sk:active,#touch .tb.b-sk.on{background-image:url(a/ui/btn_skradaj_wcisniety.webp)}
+#touch .tb.b-inv{background-image:url(a/ui/btn_plecak.webp)}#touch .tb.b-inv:active,#touch .tb.b-inv.on{background-image:url(a/ui/btn_plecak_wcisniety.webp)}
+#touch .tb.b-swap{background-image:url(a/ui/btn_bron.webp)}#touch .tb.b-swap:active,#touch .tb.b-swap.on{background-image:url(a/ui/btn_bron_wcisniety.webp)}
+#touch .tb.b-band{background-image:url(a/ui/btn_bandaz.webp)}#touch .tb.b-band:active,#touch .tb.b-band.on{background-image:url(a/ui/btn_bandaz_wcisniety.webp)}
+#touch .tb.dir[data-hold=left]{background-image:url(a/ui/btn_lewo.webp)}#touch .tb.dir[data-hold=left]:active,#touch .tb.dir[data-hold=left].on{background-image:url(a/ui/btn_lewo_wcisniety.webp)}
+#touch .tb.dir[data-hold=right]{background-image:url(a/ui/btn_prawo.webp)}#touch .tb.dir[data-hold=right]:active,#touch .tb.dir[data-hold=right].on{background-image:url(a/ui/btn_prawo_wcisniety.webp)}
+#touch .tb:active,#touch .tb.on{color:transparent}#touch .tb.big.b-atk{width:84px;height:84px}#touch .b-run{right:96px!important}
+.sysb{width:44px;height:44px;border:0;border-radius:50%;background:transparent center/contain no-repeat;color:transparent;box-shadow:0 2px 8px rgba(0,0,0,.4)}.sysb svg{display:none}
+#sysMenu{background-image:url(a/ui/btn_menu.webp)}#sysMenu:active{background-image:url(a/ui/btn_menu_wcisniety.webp)}#sysSound{background-image:url(a/ui/btn_dzwiek.webp)}#sysSound:active{background-image:url(a/ui/btn_dzwiek_wcisniety.webp)}#sysSound.off{background-image:url(a/ui/btn_dzwiek_wyl.webp)}#sysSound.off:active{background-image:url(a/ui/btn_dzwiek_wyl_wcisniety.webp)}.sysb:hover{filter:brightness(1.12)}
 #rotate{position:absolute;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center;font:700 30px var(--display);padding:30px;z-index:200}
 @media (prefers-reduced-motion:reduce){.toast{animation:none}#banner,#tip{transition:none}}
 </style>
@@ -2945,6 +2961,9 @@ function layerVis(e){const b=BGF[e.f];if(b)return b.revealed&&playerBg()===b;con
 inView=(function(_v){return function(p){if(p&&p.f!=null&&!layerVis(p))return false;return _v(p)}})(inView);
 function drawFrontExit(b){if(!b.revealed)return;const fw=DOORDEF[b.door][1]*AS,fh=633*AS,c=ctx;c.save();c.globalAlpha=.22;dImg(AI('doors/'+b.door+'_front'),b.fx-fw/2,F[0]+FDY+2-fh,fw,fh,false);c.restore();
   const g=c.createRadialGradient(b.fx,F[0]+10,4,b.fx,F[0]+10,70);g.addColorStop(0,'rgba(255,230,180,.22)');g.addColorStop(1,'rgba(255,230,180,0)');c.fillStyle=g;c.fillRect(b.fx-70,F[0]-40,140,70)}
+
+/* wstępne wczytanie grafik przycisków (także wciśniętych), żeby nie mrugały przy pierwszym dotyku */
+for(const n of['atak','bieg','akcja','akcja2','skradaj','plecak','bron','bandaz','lewo','prawo','menu','dzwiek','dzwiek_wyl'])for(const v of['','_wcisniety'])loadImg('a/ui/btn_'+n+v+'.webp');
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
