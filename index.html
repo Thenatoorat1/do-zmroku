@@ -3104,6 +3104,13 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 .skpips{display:inline-flex;gap:3px}.skpips i{width:10px;height:10px;border-radius:50%;border:1px solid #d6a23a}.skpips i.on{background:#d6a23a}
 .sknote{font-size:12px;color:#8f877a;margin:12px 0 0}
 @media (max-width:700px){.skhead img{width:60px;height:60px}.skhead h2{font-size:18px}.sktab span{display:none}.sktab{padding:4px}}`;document.head.appendChild(st)})();
+/* ekran: iPhone potrafi zmienić rozmiar okna bez zdarzenia resize (pasek adresu, obrót, PWA) – wtedy obraz się rozciągał */
+(function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
+  addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
+const GAME_VER='0.10.3';
+(function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
+  const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
