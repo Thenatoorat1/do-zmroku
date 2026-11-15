@@ -1980,7 +1980,8 @@ function drawKitFacade(b){
     else{const nW=Math.max(1,b.n-(f===0&&b.kind==='garage'?1:0)),a=b.x0+150,z=b.x1-150;
       if(f===0&&b.kind==='garage')dPart('door_garage_roll',b.x0+w*.62,F[0]+16,{k:.9});
       for(let i=0;i<nW;i++){const wx=nW===1?(a+z)/2:lerp(a,z,i/(nW-1));if(f===0&&b.kind==='garage'&&Math.abs(wx-(b.x0+w*.62))<120)continue;dPart(b.win,wx,F[f]-58+FDY,{k:.82})}}}
-  if(b.door){drawDoorFront(b,b.x0+50);drawDoorFront(b,b.x1-50)}else{dPart(b.ent,b.x0+50,F[0]+16,{k:.78});dPart(b.ent,b.x1-50,F[0]+16,{k:.78})}
+  /* wejścia z nowymi drzwiami są tylko na krawędziach: po prawej grafika, po lewej jej lustrzane odbicie */
+  if(b.door){}else{dPart(b.ent,b.x0+50,F[0]+16,{k:.78});dPart(b.ent,b.x1-50,F[0]+16,{k:.78})}
   if(b.sign){const sx=(b.x0+b.x1)/2,sy=RTOP(0)+40;c.font='700 22px "Crimson Pro",Georgia,serif';const tw=c.measureText(b.sign).width+36;
     c.fillStyle='#d7cfbb';c.fillRect(sx-tw/2,sy-24,tw,34);c.fillStyle='#8a2a20';c.textAlign='center';c.fillText(b.sign,sx,sy)}
 }
