@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.14.1';
+const GAME_VER='0.14.2';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3507,7 +3507,7 @@ ANI.pies={wan:34,inv:125,run:255,sense:1.4,wm:.8,rm:.5,invRun:false,dodge:.4,
     else if(a.k==='bite'){if(!a.f&&a.t>.4){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<62&&aKnock(z,9,14))aBleed(p)}}
     else if(a.k==='leap'){const u=clamp((a.t-.12)/.45,0,1);moveEnt(z,(lerp(a.x0,a.tx,smooth(u))-z.x));
       if(!a.f&&a.t>.5){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<60&&aKnock(z,11,22)){aBleed(p);aTip('pies','Pies gryzie do krwi. Uciekaj albo bij pierwszy.',2800)}}}
-    else if(a.k==='dodge'){if(a.t<.45)moveEnt(z,a.dodgeDir*dt*190)}
+    else if(a.k==='dodge'){if(a.t<.45)moveEnt(z,z.dodgeDir*dt*190)}
     if(a.t>=a.dur){z.act=null;if(a.k==='dodge'){z.counter=true;z.face=Math.sign(p.x-z.x)||z.face}}},
   chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
     if(ok&&z.counter&&dist<170){z.counter=false;z.face=dir;z.act={k:dist>80?'leap':'bite',k2:dist>80?'leap':'attack',t:0,dur:dist>80?.75:.8,x0:z.x,tx:p.x-dir*34};asnd(z,'atak',.7);return}
@@ -3524,7 +3524,7 @@ ANI.kot={wan:32,inv:130,run:240,sense:1.2,wm:.8,rm:.5,dodge:.4,rev:true,
     else if(a.k==='swipe'){if(!a.f&&a.t>.35){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<58)aKnock(z,7,10)}}
     else if(a.k==='pounce'){const u=clamp((a.t-.2)/.5,0,1);moveEnt(z,(lerp(a.x0,a.tx,smooth(u))-z.x));
       if(!a.f&&a.t>.62){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<62&&aKnock(z,10,26)){aBleed(p);aTip('kot','Kot skoczył z góry. Przy kocie nie stój w miejscu.',2800)}}}
-    else if(a.k==='dodge'){if(a.t>.15&&a.t<.7)moveEnt(z,a.dodgeDir*dt*230)}
+    else if(a.k==='dodge'){if(a.t>.15&&a.t<.7)moveEnt(z,z.dodgeDir*dt*230)}
     else if(a.k==='revive'){if(a.t>=a.dur){z.revT=null}}
     if(a.t>=a.dur){z.act=null;if(a.k==='dodge'){z.counter=true;z.face=Math.sign(p.x-z.x)||z.face}}},
   chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
@@ -3605,7 +3605,7 @@ ANI.sarna={wan:36,inv:130,run:262,sense:1.2,wm:.9,rm:.6,dodge:.35,
     if(a.k==='kick'){if(!a.f&&a.t>.4){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<66)aKnock(z,8,18)}}
     else if(a.k==='kickback'){if(!a.f&&a.t>.35){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<78)aKnock(z,9,30)}}
     else if(a.k==='jump'){const u=clamp((a.t-.12)/.55,0,1);z.x=clamp(lerp(a.x0,a.tx,smooth(u)),40,WORLD_W-40)}
-    else if(a.k==='dodge'){if(a.t<.5)moveEnt(z,a.dodgeDir*dt*200)}
+    else if(a.k==='dodge'){if(a.t<.5)moveEnt(z,z.dodgeDir*dt*200)}
     if(a.t>=a.dur){z.act=null;if(a.k==='dodge'){z.counter=true;z.face=Math.sign(p.x-z.x)||z.face}}},
   chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
     if(z.pause>0){z.pause-=dt;z.moving=false;z.face=dir;aLoop(z,'idle',8);return}
