@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.12.2';
+const GAME_VER='0.12.3';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3243,6 +3243,39 @@ renderGloss=(function(_r){return function(tab){_r(tab);if(tab!=='kryjowka')retur
   for(const[id,o]of Object.entries(DEF)){const cost=Object.entries(o.need).map(([k,n])=>ID[k].n+' ×'+n).join(', '),fix=Object.entries(o.fix).map(([k,n])=>ID[k].n+' ×'+n).join(', ');
     h+=`<div class="ge gitem"><div class="gi"><img src="a/def/${o.img}_1.webp" alt=""></div><div><b class="gn">${o.n}</b><div class="gs">Obrona · warsztat</div><p>${o.d}</p><div class="kv"><span>Materiały</span><span>${cost}</span><span>Wytrzymałość</span><span>${o.hp}</span><span>Cecha</span><span>${o.cecha}</span><span>Naprawa</span><span>${fix}: +35%</span></div></div></div>`}
   $('glList').insertAdjacentHTML('beforeend',h)}})(renderGloss);
+
+/* ================= DRABINY I SKRZYNKA NA DACHU ================= */
+/* wspinaczka: na pionowym odcinku postać zawsze patrzy w ścianę budynku (od drabiny/rynny w stronę dachu) */
+updClimb=(function(_u){return function(e,dt){const r=_u(e,dt);const c=e.climb;
+  if(c&&c.vert&&c.c&&!c.c.inside&&c.c.kind!=='hatch'){const d=Math.sign(c.c.x1-c.c.x0);if(d)e.face=d}
+  return r}})(updClimb);
+/* grafiki opcjonalne - jeśli pliku nie ma, rysuje się zapasowy wygląd */
+const IMG_LADSIDE=loadImg('a/parts/ladder_side.webp'),IMG_LADIN=loadImg('a/parts/ladder_inside.webp'),IMG_ROOFBOX=loadImg('a/lprops/roof_crate.webp');
+/* drabina z boku budynku: widok z boku, przy ścianie (ściana po lewej od drabiny) */
+function drawKLadder(p,y){const c=ctx,x=p.x,y0=p.top,y1=y+2,h=y1-y0;if(h<10)return;
+  if(okI(IMG_LADSIDE)){const w=IMG_LADSIDE.naturalWidth/IMG_LADSIDE.naturalHeight*Math.min(h,900);const ww=Math.max(46,Math.min(w,90));dImg(IMG_LADSIDE,x-ww*.72,y0,ww,h);return}
+  c.save();
+  /* wsporniki do ściany */
+  c.fillStyle='#4a4038';for(let yy=y0+30;yy<y1-20;yy+=150){c.fillRect(x-46,yy,46,6);c.fillStyle='#2c2621';c.fillRect(x-48,yy-5,7,16);c.fillStyle='#4a4038'}
+  /* szyna widziana z boku */
+  const g=c.createLinearGradient(x-4,0,x+5,0);g.addColorStop(0,'#6b5645');g.addColorStop(.5,'#8a6f58');g.addColorStop(1,'#43362c');
+  c.fillStyle=g;c.fillRect(x-4,y0,9,h);
+  c.fillStyle='rgba(160,90,40,.35)';for(let yy=y0+12;yy<y1;yy+=58)c.fillRect(x-3,yy,3,18);
+  /* szczeble widziane końcem */
+  for(let yy=y0+14;yy<y1-6;yy+=28){c.fillStyle='#2c2621';c.beginPath();c.ellipse(x+1,yy,7,4,0,0,7);c.fill();c.fillStyle='#8a6f58';c.beginPath();c.ellipse(x+1,yy-1,5,2.6,0,0,7);c.fill()}
+  c.restore()}
+/* drabina w środku budynku (do włazu / na piętro) */
+function drawInLadder(p,y){const c=ctx,x=p.x,y0=p.top,h=y-y0;if(h<10)return;
+  if(okI(IMG_LADIN)){dImg(IMG_LADIN,x-IMG_LADIN.naturalWidth/IMG_LADIN.naturalHeight*h*.5,y0,IMG_LADIN.naturalWidth/IMG_LADIN.naturalHeight*h,h);return}
+  const hw=17;c.save();
+  const g=c.createLinearGradient(0,0,6,0);
+  for(const sx of[-hw,hw]){c.fillStyle='#3a332d';c.fillRect(x+sx-3,y0,6,h);c.fillStyle='#5b4f44';c.fillRect(x+sx-3,y0,2.2,h)}
+  for(let yy=y0+14;yy<y-6;yy+=24){c.fillStyle='#2b2520';c.fillRect(x-hw,yy+1,hw*2,5);c.fillStyle='#6a5a4b';c.fillRect(x-hw,yy,hw*2,3.4)}
+  c.restore()}
+/* skrzynka na dachu (zapasowy wygląd: wojskowa skrzynia z metalu) */
+function drawRoofBox(p,y,hi){const c=ctx,x=p.x;
+  if(okI(IMG_ROOFBOX)){const w=130,h=IMG_ROOFBOX.naturalHeight/IMG_ROOFBOX.naturalWidth*w;if(hi){c.save();c.shadowColor='rgba(240,200,120,.95)';c.shadowBlur=16}dImg(IMG_ROOFBOX,x-w/2,y-h+4,w,h);if(hi)c.restore();return}
+  c.fillStyle=hi?'#5a6a5a':'#46524a';c.fillRect(x-34,y-40,68,40);c.fillStyle='#2e3830';c.fillRect(x-36,y-44,72,8);c.fillStyle='#c8a040';c.fillRect(x-4,y-30,8,8)}
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
@@ -3460,7 +3493,7 @@ function drawProp(p){
     case'kpart':dPart(p.id,p.x,y+4);break;
     case'kdeco':dPart(p.id,p.x,y+14);break;
     case'kpipe':dPart('drainpipe',p.x,y+4,{sy:(y+4-p.top)/(KP.drainpipe.height*AS)});break;
-    case'kladder':dPart('ladder_steel',p.x,y+2,{sy:(y+2-p.top)/(KP.ladder_steel.height*AS)});break;
+    case'kladder':drawKLadder(p,y);break;
     case'klamp':{dPart('ceiling_lamp',p.x,F[p.f]-214+FDY,{k:.8});const on=p.l&&lampOn(p.l)&&p.l.b&&(p.l.b.revealed||(player&&player.peek&&player.peek.b===p.l.b));if(on){c.fillStyle='rgba(255,220,150,.75)';c.beginPath();c.arc(p.x,F[p.f]-218+FDY,4,0,7);c.fill()}break}
     case'bp':{const near=player&&mode==='play'&&!p.deco&&Math.abs(player.x-p.x)<60&&player.f===p.f;if(near){c.shadowColor='rgba(240,200,120,.9)';c.shadowBlur=14}dBP(p.id,p.x,y+(typeof BPDY==='number'?BPDY:-3),{flip:p.flip,k:p.k||1});c.shadowBlur=0;break}
     case'bslot':{const near=player&&Math.abs(player.x-p.x)<60&&player.f===p.f;c.strokeStyle=near?'rgba(214,162,58,.85)':'rgba(235,227,210,.18)';c.lineWidth=2;c.setLineDash([8,7]);c.strokeRect(p.x-p.w/2,y-150,p.w,150);c.setLineDash([]);
@@ -3526,12 +3559,12 @@ function drawProp(p){
     case'crate':{c.fillStyle=hi?'#8a6c44':'#735a38';c.fillRect(p.x-34,y-56,68,56);c.strokeStyle='#4a3a24';c.lineWidth=4;c.strokeRect(p.x-32,y-54,64,52);c.beginPath();c.moveTo(p.x-32,y-54);c.lineTo(p.x+32,y-2);c.stroke();break}
     case'pipe':{c.fillStyle='#5a5e60';c.fillRect(p.x-4,p.top+10,8,y-p.top-10);c.fillStyle='#3a3e40';for(let yy=p.top+40;yy<y;yy+=70){c.fillRect(p.x-8,yy,16,5);c.fillRect(p.x,yy+1,95-12,3)}c.fillRect(p.x-4,y-14,22,8);c.fillRect(p.x-4,p.top+10,30,7);break}
     case'ladder':{line(p.x-14,p.top,p.x-14,y,4,'#6a6e70');line(p.x+14,p.top,p.x+14,y,4,'#6a6e70');for(let yy=p.top+10;yy<y;yy+=24)line(p.x-14,yy,p.x+14,yy,3,'#6a6e70');break}
-    case'inladder':{line(p.x-13,p.top,p.x-13,y,4,'#4a4440');line(p.x+13,p.top,p.x+13,y,4,'#4a4440');for(let yy=p.top+12;yy<y;yy+=22)line(p.x-13,yy,p.x+13,yy,3,'#4a4440');break}
+    case'inladder':{drawInLadder(p,y);break}
     case'skylight':{c.fillStyle='#3a3e40';c.fillRect(p.x-26,y-14,52,14);c.fillStyle='rgba(150,180,190,.6)';c.fillRect(p.x-22,y-12,44,8);break}
     case'ac':{c.fillStyle='#8a8c88';c.fillRect(p.x-40,y-46,80,46);c.fillStyle='#5a5c58';for(let i=0;i<6;i++)c.fillRect(p.x-34+i*12,y-40,6,34);c.strokeStyle='#3a3c3a';c.lineWidth=2;c.beginPath();c.arc(p.x+20,y-23,14,0,7);c.stroke();break}
     case'chimney':{c.fillStyle='#5a3a30';c.fillRect(p.x-18,y-70,36,70);c.fillStyle='#3a2620';c.fillRect(p.x-22,y-76,44,8);break}
     case'antenna':{line(p.x,y,p.x,y-120,3,'#2a2c2e');for(let i=0;i<4;i++)line(p.x-30+i*5,y-110+i*22,p.x+30-i*5,y-110+i*22,2,'#2a2c2e');break}
-    case'roofbox':{c.fillStyle=hi?'#5a6a5a':'#46524a';c.fillRect(p.x-34,y-40,68,40);c.fillStyle='#2e3830';c.fillRect(p.x-36,y-44,72,8);c.fillStyle='#c8a040';c.fillRect(p.x-4,y-30,8,8);break}
+    case'roofbox':{drawRoofBox(p,y,hi);break}
     case'partition':{c.fillStyle='#3e3a30';c.fillRect(p.x-8,264,16,180);c.fillStyle='#2e2a22';c.fillRect(p.x-10,440,20,4);break}
     case'roomlabel':{c.fillStyle='rgba(30,28,22,.55)';c.font='700 15px "Barlow Semi Condensed",sans-serif';c.textAlign='center';c.fillText(p.txt,p.x,y-318);break}
     case'wardrobe':{c.fillStyle='#4e3e2e';c.fillRect(p.x-38,y-170,76,170);c.fillStyle='#3a2e22';c.fillRect(p.x-1,y-166,2,162);c.fillStyle='#b8a888';c.fillRect(p.x-8,y-100,4,12);c.fillRect(p.x+4,y-100,4,12);break}
