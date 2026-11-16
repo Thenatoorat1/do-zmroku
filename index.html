@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.12.3';
+const GAME_VER='0.12.4';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3253,7 +3253,7 @@ updClimb=(function(_u){return function(e,dt){const r=_u(e,dt);const c=e.climb;
 const IMG_LADSIDE=loadImg('a/parts/ladder_side.webp'),IMG_LADIN=loadImg('a/parts/ladder_inside.webp'),IMG_ROOFBOX=loadImg('a/lprops/roof_crate.webp');
 /* drabina z boku budynku: widok z boku, przy ścianie (ściana po lewej od drabiny) */
 function drawKLadder(p,y){const c=ctx,x=p.x,y0=p.top,y1=y+2,h=y1-y0;if(h<10)return;
-  if(okI(IMG_LADSIDE)){const w=IMG_LADSIDE.naturalWidth/IMG_LADSIDE.naturalHeight*Math.min(h,900);const ww=Math.max(46,Math.min(w,90));dImg(IMG_LADSIDE,x-ww*.72,y0,ww,h);return}
+  if(okI(IMG_LADSIDE)){const w=IMG_LADSIDE.naturalWidth/IMG_LADSIDE.naturalHeight*Math.min(h,900);const ww=Math.max(46,Math.min(w,90));dImg(IMG_LADSIDE,x-ww*.76,y0,ww,h);return}
   c.save();
   /* wsporniki do ściany */
   c.fillStyle='#4a4038';for(let yy=y0+30;yy<y1-20;yy+=150){c.fillRect(x-46,yy,46,6);c.fillStyle='#2c2621';c.fillRect(x-48,yy-5,7,16);c.fillStyle='#4a4038'}
@@ -3274,7 +3274,7 @@ function drawInLadder(p,y){const c=ctx,x=p.x,y0=p.top,h=y-y0;if(h<10)return;
   c.restore()}
 /* skrzynka na dachu (zapasowy wygląd: wojskowa skrzynia z metalu) */
 function drawRoofBox(p,y,hi){const c=ctx,x=p.x;
-  if(okI(IMG_ROOFBOX)){const w=130,h=IMG_ROOFBOX.naturalHeight/IMG_ROOFBOX.naturalWidth*w;if(hi){c.save();c.shadowColor='rgba(240,200,120,.95)';c.shadowBlur=16}dImg(IMG_ROOFBOX,x-w/2,y-h+4,w,h);if(hi)c.restore();return}
+  if(okI(IMG_ROOFBOX)){const w=112,h=IMG_ROOFBOX.naturalHeight/IMG_ROOFBOX.naturalWidth*w;if(hi){c.save();c.shadowColor='rgba(240,200,120,.95)';c.shadowBlur=16}dImg(IMG_ROOFBOX,x-w/2,y-h+4,w,h);if(hi)c.restore();return}
   c.fillStyle=hi?'#5a6a5a':'#46524a';c.fillRect(x-34,y-40,68,40);c.fillStyle='#2e3830';c.fillRect(x-36,y-44,72,8);c.fillStyle='#c8a040';c.fillRect(x-4,y-30,8,8)}
 
 /* ================= FLOW ================= */
