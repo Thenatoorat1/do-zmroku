@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.13.1';
+const GAME_VER='0.13.2';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3375,6 +3375,39 @@ updZombie=(function(_u){return function(z,dt){
 /* narzędzie testowe */
 function znSpawn(type,dx,face){const p=player;const z=newZombie(p.x+dx,p.f,face||-1,type);z.eating=false;zombies.push(z);return z}
 
+/* ================= BARYKADA WYJŚCIA Z POZIOMU: grafika + migający neon "DO MIASTA" ================= */
+const XB_IMG=[null,loadImg('a/lprops/barykada_wyjscie_1.webp'),loadImg('a/lprops/barykada_wyjscie_2.webp')];
+/* tablica na grafice (ułamki szerokości i wysokości) */
+const XB_SIGN=[null,[.310,.324,.698,.554],[.248,.203,.766,.406]];
+const XB_H=186;
+/* migotanie jak w zepsutej rurce neonowej: stabilnie świeci, co jakiś czas drga */
+function neonA(t,seed){const c=Math.floor(t*.9+seed),ph=(t*.9+seed)%1;let a=1;
+  if(((c*7919+seed*13)%4)===0){a=ph<.08?.15:ph<.16?1:ph<.22?.1:ph<.3?1:ph<.36?.35:ph<.44?1:ph<.5?.2:1}
+  return a}
+function drawExitBarr(p,y){const c=ctx;if(p.v==null)p.v=Math.random()<.5?1:2;const im=XB_IMG[p.v];if(!okI(im))return false;
+  const h=XB_H,w=im.naturalWidth/im.naturalHeight*h,x0=p.x+4-w/2,y0=y+5-h;
+  c.drawImage(im,x0,y0,w,h);
+  const s=XB_SIGN[p.v],sx=x0+s[0]*w,sy=y0+s[1]*h,sw=(s[2]-s[0])*w,sh=(s[3]-s[1])*h,t=(typeof time==='number'?time:performance.now()/1000);
+  const right=p.x>(typeof WORLD_W==='number'?WORLD_W/2:1e9),txt='DO MIASTA';
+  c.save();c.beginPath();c.rect(sx,sy,sw,sh);c.clip();
+  let fs=Math.min(sh*.64,30);const fnt=()=>'700 '+fs+'px "Barlow Semi Condensed",sans-serif';c.font=fnt();c.textBaseline='middle';c.textAlign='left';
+  const chars=[...txt];let ws=chars.map(ch=>c.measureText(ch).width+fs*.08),tw=ws.reduce((a,b)=>a+b,0),aw=fs*1.05,gap=fs*.35;
+  const k=Math.min(1,sw*.92/(tw+aw+gap));if(k<1){fs*=k;c.font=fnt();ws=chars.map(ch=>c.measureText(ch).width+fs*.08);tw=ws.reduce((a,b)=>a+b,0);aw=fs*1.05;gap=fs*.35}
+  const a0=neonA(t,p.v*.37),tot=tw+aw+gap,cx0=sx+(sw-tot)/2,cy=sy+sh/2+fs*.04;
+  /* poświata na tablicy */
+  c.globalCompositeOperation='lighter';const g=c.createRadialGradient(sx+sw/2,cy,2,sx+sw/2,cy,sw*.6);g.addColorStop(0,'rgba(255,60,110,'+.12*a0+')');g.addColorStop(1,'rgba(255,60,110,0)');c.fillStyle=g;c.fillRect(sx,sy,sw,sh);c.globalCompositeOperation='source-over';
+  const neon=(a,fn)=>{c.shadowColor='rgba(255,50,100,'+a+')';c.shadowBlur=12*a;fn(.35+.65*a);fn(.35+.65*a);c.shadowBlur=0};
+  let x=cx0+(right?0:aw+gap);
+  for(let i=0;i<chars.length;i++){const ch=chars[i];const bad=(ch==='M'||ch==='A')&&i>3;const a=bad?neonA(t*1.7,p.v+i*.61+3):a0;
+    if(ch!==' '){neon(a,q=>{c.fillStyle='rgba(255,84,130,'+q+')';c.fillText(ch,x,cy)});
+      c.lineWidth=Math.max(.7,fs*.045);c.strokeStyle='rgba(255,232,240,'+a*.9+')';c.strokeText(ch,x,cy)}
+    x+=ws[i]}
+  /* strzałka rysowana ścieżką (czcionka nie ma strzałek) */
+  const ax=right?cx0+tw+gap:cx0,d=right?1:-1,mid=ax+aw/2,hl=aw*.42,ah=fs*.34;
+  const arrow=q=>{c.strokeStyle='rgba(255,84,130,'+q+')';c.lineWidth=Math.max(1.4,fs*.13);c.lineCap='round';c.lineJoin='round';c.beginPath();c.moveTo(mid-d*aw/2,cy);c.lineTo(mid+d*aw/2,cy);c.moveTo(mid+d*aw/2-d*hl,cy-ah);c.lineTo(mid+d*aw/2,cy);c.lineTo(mid+d*aw/2-d*hl,cy+ah);c.stroke()};
+  neon(neonA(t,p.v*.37+2.1),arrow);
+  c.restore();return true}
+
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
 function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];PROJ=[];CLOUD=[];SZP.length=0;SZB.length=0;SZPUD.length=0;G.mzWarned=false;G.szWarned=false;G.szHit=false;
@@ -3596,7 +3629,7 @@ function drawProp(p){
     case'bp':{const near=player&&mode==='play'&&!p.deco&&Math.abs(player.x-p.x)<60&&player.f===p.f;if(near){c.shadowColor='rgba(240,200,120,.9)';c.shadowBlur=14}dBP(p.id,p.x,y+(typeof BPDY==='number'?BPDY:-3),{flip:p.flip,k:p.k||1});c.shadowBlur=0;break}
     case'bslot':{const near=player&&Math.abs(player.x-p.x)<60&&player.f===p.f;c.strokeStyle=near?'rgba(214,162,58,.85)':'rgba(235,227,210,.18)';c.lineWidth=2;c.setLineDash([8,7]);c.strokeRect(p.x-p.w/2,y-150,p.w,150);c.setLineDash([]);
       if(near){c.fillStyle='rgba(214,162,58,.12)';c.fillRect(p.x-p.w/2,y-150,p.w,150)}c.fillStyle='rgba(235,227,210,.4)';c.font='700 34px "Crimson Pro",Georgia,serif';c.textAlign='center';c.fillText('+',p.x,y-64);break}
-    case'barricade':{
+    case'barricade':{if(drawExitBarr(p,y))break;
       c.fillStyle='#5d5543';for(let i=0;i<4;i++)for(let j=0;j<3-(i>2?1:0);j++){rr(p.x-80+j*52+(i%2)*24,y-24-i*24,50,24,10);c.fill()}
       c.fillStyle='#4a3826';for(let i=0;i<5;i++){c.save();c.translate(p.x+20,y-130+i*24);c.rotate((i%2?-1:1)*.08);c.fillRect(-90,-6,190,13);c.restore()}
       c.fillStyle='#262421';c.fillRect(p.x-96,y-190,8,190);c.fillRect(p.x+92,y-190,8,190);
