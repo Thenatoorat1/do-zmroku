@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.13.3';
+const GAME_VER='0.14.0';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3408,6 +3408,259 @@ function drawExitBarr(p,y){const c=ctx;if(p.v==null)p.v=Math.random()<.5?1:2;con
   neon(neonA(t,p.v*.37+2.1),arrow);
   c.restore();return true}
 
+/* ================= ZOMBIE ZWIERZĘTA: pies, kot, szczur, kruk (miasto), sarna, niedźwiedź (las) ================= */
+const ZAM={"pies":{"H":100.5,"T":92.1,"a":{"idle":[[2,2,127,100,63.7,99.7],[133,2,127,100,63.7,99.7],[264,2,127,100,63.7,99.7],[395,2,127,100,63.7,99.7],[526,2,127,100,63.7,99.7],[657,2,127,100,63.7,99.7],[788,2,127,100,63.7,99.7],[919,2,127,100,63.7,99.7]],"alert":[[1050,2,127,100,63.7,99.7],[1181,2,127,100,63.7,99.7],[1312,2,127,99,63.7,99.0],[1443,2,127,112,63.7,111.7],[1574,2,123,110,61.5,110.2],[1701,2,125,110,63.0,109.5],[1830,2,126,109,63.0,108.7],[2,118,125,110,63.0,109.5]],"walk":[[131,118,127,100,63.7,99.7],[262,118,126,99,63.7,99.0],[392,118,123,99,62.2,99.0],[519,118,122,103,60.7,102.7],[645,118,131,99,66.0,99.0],[780,118,133,96,66.7,96.7],[917,118,133,97,66.7,97.5],[1054,118,133,100,66.7,99.7]],"run":[[1191,118,127,100,63.7,99.7],[1322,118,126,100,63.0,99.7],[1452,118,129,100,64.5,100.5],[1585,118,130,104,65.2,107.2],[1719,118,134,101,66.7,110.2],[1857,118,134,95,66.7,111.0],[2,232,137,104,69.0,108.7],[143,232,135,95,67.5,96.0]],"attack":[[282,232,127,100,63.7,99.7],[413,232,125,100,62.2,99.7],[542,232,123,98,61.5,98.2],[669,232,137,80,69.0,80.2],[810,232,131,92,65.2,91.5],[945,232,130,95,64.5,94.5],[1079,232,131,98,66.0,98.2],[1214,232,130,99,65.2,99.0]],"leap":[[1348,232,128,107,64.5,107.2],[1480,232,134,93,67.5,118.5],[1618,232,137,101,68.2,100.5],[1759,232,127,77,63.7,76.5],[1890,232,137,88,69.0,87.7],[2,343,137,86,69.0,85.5],[143,343,129,108,64.5,108.0],[276,343,131,120,66.0,120.0]],"dodge":[[411,343,125,119,63.0,118.5],[540,343,122,118,61.5,119.2],[666,343,126,107,63.0,119.2],[796,343,129,102,64.5,118.5],[929,343,134,98,67.5,115.5],[1067,343,137,98,69.0,111.0],[1208,343,137,99,69.0,99.7],[1349,343,137,95,69.0,94.5]],"howl":[[1490,343,127,100,63.7,99.7],[1621,343,124,104,62.2,104.2],[1749,343,119,116,59.2,115.5],[1872,343,124,124,62.2,123.7],[2,471,111,119,55.5,118.5],[117,471,116,109,58.5,108.7],[237,471,131,101,66.0,100.5],[372,471,127,100,63.7,99.7]],"hit":[[503,471,127,100,63.7,99.7],[634,471,129,113,64.5,113.2],[767,471,125,96,62.2,96.0],[896,471,137,97,68.2,96.7],[1037,471,131,98,66.0,98.2],[1172,471,129,104,64.5,104.2],[1305,471,125,102,63.0,102.7],[1434,471,127,101,63.7,102.0]],"kick_fall":[[1565,471,127,100,63.7,99.7],[1696,471,134,99,67.5,99.0],[1834,471,122,92,61.5,97.5],[2,594,128,80,63.7,86.2],[134,594,128,77,64.5,84.7],[266,594,129,77,64.5,84.0],[399,594,129,77,64.5,84.0],[532,594,129,77,64.5,84.0]],"death_fall":[[665,594,127,100,63.7,99.7],[796,594,127,101,63.7,100.5],[927,594,132,47,66.0,46.5],[1063,594,132,42,66.0,42.0],[1199,594,132,42,66.0,42.0],[1335,594,132,42,66.0,42.0],[1471,594,132,42,66.0,42.0],[1607,594,132,42,66.0,42.0]],"death_ground":[[1743,594,132,42,66.0,42.0],[1879,594,132,42,66.0,42.0],[2,699,132,42,66.0,42.0],[138,699,132,42,66.0,42.0],[274,699,132,42,66.0,42.0],[410,699,132,42,66.0,42.0],[546,699,132,42,66.0,42.0],[682,699,132,42,66.0,42.0]],"eat":[[818,699,127,100,63.7,99.7],[949,699,127,99,63.7,99.0],[1080,699,127,99,63.7,99.0],[1211,699,126,99,63.0,99.0],[1341,699,126,99,63.0,99.0],[1471,699,125,98,63.0,98.2],[1600,699,125,98,63.0,98.2],[1729,699,125,98,63.0,97.5]]}},"kot":{"H":40.5,"T":43.9,"a":{"idle":[[2,2,53,40,27.0,40.1],[59,2,53,40,26.6,40.1],[116,2,52,40,25.9,40.1],[172,2,51,39,25.9,39.7],[227,2,52,40,26.2,40.1],[283,2,54,40,27.0,40.5],[341,2,56,40,28.1,40.5],[401,2,56,40,28.1,40.5]],"alert":[[461,2,53,40,27.0,40.1],[518,2,53,40,27.0,40.1],[575,2,53,40,27.0,40.1],[632,2,55,38,27.4,39.0],[691,2,57,32,28.5,33.0],[752,2,57,32,28.5,32.6],[813,2,58,31,29.2,31.1],[875,2,60,28,30.0,28.9]],"walk":[[939,2,53,40,27.0,40.1],[996,2,53,40,26.6,40.1],[1053,2,53,40,26.6,40.1],[1110,2,52,40,26.2,40.5],[1166,2,52,40,26.2,40.5],[1222,2,52,40,26.2,40.5],[1278,2,52,40,25.9,40.5],[1334,2,53,40,26.6,40.5]],"run":[[1391,2,53,40,27.0,40.1],[1448,2,53,40,27.0,40.1],[1505,2,54,40,27.0,40.1],[1563,2,54,40,27.0,40.5],[1621,2,55,41,27.7,42.0],[1680,2,57,44,28.5,45.0],[1741,2,61,43,31.1,43.9],[1806,2,62,36,31.1,39.4]],"attack":[[1872,2,53,40,27.0,40.1],[1929,2,53,39,26.6,39.7],[2,50,61,38,30.7,38.2],[67,50,57,39,28.9,39.4],[128,50,52,39,26.2,39.7],[184,50,59,40,30.0,40.9],[247,50,59,37,30.0,38.2],[310,50,54,39,27.4,39.4]],"pounce":[[368,50,58,46,28.9,46.5],[430,50,58,46,28.9,55.5],[492,50,62,46,31.5,47.6],[558,50,59,33,30.0,34.9],[621,50,56,35,28.5,36.4],[681,50,55,45,27.7,46.9],[740,50,55,46,27.4,47.6],[799,50,55,46,27.4,48.0]],"dodge":[[858,50,46,56,23.2,57.4],[908,50,47,43,23.6,44.2],[959,50,52,39,25.9,42.4],[1015,50,58,45,29.2,47.2],[1077,50,59,28,29.6,30.4],[1140,50,58,29,28.9,30.7],[1202,50,57,29,28.9,30.7],[1263,50,57,29,28.9,30.7]],"hiss":[[1324,50,53,40,27.0,40.1],[1381,50,51,41,25.5,41.6],[1436,50,52,43,26.2,43.5],[1492,50,61,38,30.7,39.0],[1557,50,59,38,29.6,38.2],[1620,50,57,40,28.9,40.1],[1681,50,57,40,28.5,40.1],[1742,50,56,40,28.1,40.1]],"hit":[[1802,50,53,40,27.0,40.1],[1859,50,56,42,28.5,43.1],[1919,50,53,37,26.6,37.5],[1976,50,57,37,28.5,38.2],[2,110,58,37,29.2,37.5],[64,110,58,38,28.9,39.0],[126,110,58,38,28.9,39.0],[188,110,54,38,27.4,39.0]],"kick_fall":[[246,110,53,40,27.0,40.1],[303,110,53,40,27.0,40.1],[360,110,59,34,29.6,45.0],[423,110,63,34,31.5,36.0],[490,110,62,29,31.1,28.9],[556,110,62,29,31.1,28.5],[622,110,62,30,31.1,28.9],[688,110,62,30,30.7,28.9]],"death_fall":[[754,110,53,40,27.0,40.1],[811,110,50,38,25.1,39.0],[865,110,59,29,29.6,30.7],[928,110,62,17,31.1,18.7],[994,110,62,17,31.5,18.7],[1060,110,63,19,31.5,21.0],[1127,110,62,17,31.5,18.7],[1193,110,62,17,31.5,18.7]],"death_ground":[[1259,110,62,17,31.5,18.7],[1325,110,62,17,31.5,18.7],[1391,110,62,17,31.5,18.7],[1457,110,62,17,31.5,18.7],[1523,110,62,17,31.5,18.7],[1589,110,62,17,31.5,18.7],[1655,110,62,17,31.5,18.7],[1721,110,62,17,31.5,18.7]],"revive":[[1787,110,53,40,27.0,40.1],[1844,110,54,38,27.4,38.2],[1902,110,52,40,26.2,40.1],[1958,110,53,34,26.6,34.5],[2,154,52,32,25.9,32.6],[58,154,60,42,30.0,42.4],[122,154,50,54,25.1,54.7],[176,154,47,55,23.6,55.1]],"eat":[[227,154,53,40,27.0,40.1],[284,154,53,40,27.0,40.1],[341,154,53,40,26.6,40.1],[398,154,53,39,27.0,39.7],[455,154,53,39,26.6,39.7],[512,154,53,39,26.6,39.4],[569,154,53,38,27.0,39.0],[626,154,53,38,27.0,39.0]]}},"szczur":{"H":40.5,"T":33.8,"a":{"idle":[[2,2,48,40,24.0,40.2],[54,2,48,40,24.0,40.2],[106,2,48,40,23.7,40.2],[158,2,48,40,24.0,40.2],[210,2,48,40,24.3,40.2],[262,2,48,40,24.0,40.2],[314,2,48,40,24.0,40.2],[366,2,48,40,24.0,40.2]],"walk":[[418,2,48,40,24.0,40.2],[470,2,49,39,24.6,39.0],[523,2,50,39,25.2,39.6],[577,2,51,41,25.5,40.8],[632,2,51,40,25.5,40.2],[687,2,52,39,26.1,39.3],[743,2,53,40,26.7,39.9],[800,2,51,42,25.2,41.7]],"run":[[855,2,48,40,24.0,40.2],[907,2,49,39,24.9,39.9],[960,2,52,38,26.4,38.4],[1016,2,54,36,27.0,36.9],[1074,2,55,36,27.6,36.3],[1133,2,56,36,27.9,36.9],[1193,2,55,36,27.6,39.0],[1252,2,55,36,27.6,39.0]],"attack":[[1311,2,48,39,24.3,39.9],[1363,2,50,44,25.2,44.1],[1417,2,57,39,28.5,45.9],[1478,2,57,41,28.8,42.6],[1539,2,54,40,27.3,41.7],[1597,2,52,40,26.4,41.7],[1653,2,53,38,26.4,39.9],[1710,2,52,39,26.4,40.2]],"emerge":[[1766,2,48,40,24.0,40.2],[1818,2,46,43,23.4,43.2],[1868,2,44,51,22.2,51.6],[1916,2,55,42,27.6,42.6],[1975,2,53,42,26.7,42.9],[2,57,52,43,26.1,43.8],[58,57,51,44,25.8,44.7],[113,57,51,43,25.8,44.7]],"hit":[[168,57,57,43,28.8,43.2],[229,57,50,39,24.9,39.9],[283,57,46,39,23.1,39.6],[333,57,56,36,27.9,38.1],[393,57,54,37,27.6,38.7],[451,57,51,42,25.8,44.1],[506,57,51,42,25.8,43.8],[561,57,51,42,25.8,43.5]],"death_fall":[[616,57,47,40,23.7,40.2],[667,57,48,42,24.3,42.3],[719,57,56,30,28.2,31.2],[779,57,55,24,27.6,27.0],[838,57,55,22,27.6,25.2],[897,57,55,23,27.9,25.8],[956,57,55,22,27.6,25.2],[1015,57,55,23,27.9,26.1]],"death_ground":[[1074,57,55,23,27.6,25.5],[1133,57,55,23,27.6,25.5],[1192,57,55,23,27.6,25.5],[1251,57,55,23,27.6,25.5],[1310,57,55,23,27.6,25.8],[1369,57,55,23,27.9,25.8],[1428,57,55,23,27.9,26.1],[1487,57,55,23,27.9,26.1]],"eat":[[1546,57,47,40,23.7,40.2],[1597,57,47,40,23.7,40.2],[1648,57,48,40,23.7,40.2],[1700,57,48,40,24.0,40.2],[1752,57,48,40,23.7,40.2],[1804,57,49,39,24.6,39.6],[1857,57,50,39,24.9,39.3],[1911,57,50,39,24.9,39.3]],"alert":[[2,2,48,40,24.0,40.2],[54,2,48,40,24.0,40.2],[106,2,48,40,23.7,40.2],[158,2,48,40,24.0,40.2],[210,2,48,40,24.3,40.2],[262,2,48,40,24.0,40.2],[314,2,48,40,24.0,40.2],[366,2,48,40,24.0,40.2]],"kick_fall":[[616,57,47,40,23.7,40.2],[667,57,48,42,24.3,42.3],[719,57,56,30,28.2,31.2],[779,57,55,24,27.6,27.0],[838,57,55,22,27.6,25.2],[897,57,55,23,27.9,25.8],[956,57,55,22,27.6,25.2],[1015,57,55,23,27.9,26.1]]}},"kruk":{"H":72.5,"T":51.4,"a":{"idle":[[2,2,72,72,36.0,72.0],[78,2,72,72,36.0,72.5],[154,2,72,72,36.0,72.0],[230,2,74,71,37.0,71.0],[308,2,78,68,39.0,68.0],[390,2,78,67,39.5,67.0],[472,2,78,66,39.0,66.5],[554,2,78,66,39.0,66.5]],"alert":[[636,2,72,72,36.0,72.0],[712,2,74,71,37.5,71.0],[790,2,77,77,38.5,77.5],[871,2,81,86,40.5,86.5],[956,2,85,78,42.5,78.0],[1045,2,81,71,40.5,71.5],[1130,2,75,71,38.0,71.0],[1209,2,72,72,36.0,72.5]],"fly":[[1285,2,72,72,36.0,72.0],[1361,2,72,72,36.0,71.5],[1437,2,73,71,36.5,70.5],[1514,2,74,71,37.0,71.0],[1592,2,75,71,37.5,71.5],[1671,2,72,72,36.0,72.5],[1747,2,72,72,36.0,73.5],[1823,2,78,76,39.0,77.5]],"dive":[[1905,2,72,72,36.0,72.0],[2,92,72,72,36.0,72.0],[78,92,93,49,46.5,56.0],[175,92,93,84,46.5,86.5],[272,92,90,80,45.0,86.5],[366,92,81,69,40.5,81.5],[451,92,79,65,40.0,75.5],[534,92,81,65,40.5,67.0]],"peck":[[619,92,72,72,36.0,72.0],[695,92,85,55,42.0,55.5],[784,92,78,63,39.0,63.0],[866,92,81,59,40.5,59.5],[951,92,83,56,42.0,56.5],[1038,92,87,53,43.5,53.5],[1129,92,74,71,37.0,71.5],[1207,92,71,72,35.5,72.5]],"takeoff":[[1282,92,81,77,40.5,77.0],[1367,92,81,78,41.0,80.5],[1452,92,84,84,42.0,86.5],[1540,92,85,54,42.5,56.5],[1629,92,66,74,33.0,75.5],[1699,92,57,69,28.5,71.0],[1760,92,61,42,30.5,79.0],[1825,92,45,26,22.5,86.5]],"land":[[1874,92,72,72,35.5,72.5],[1950,92,75,69,37.5,74.5],[2,180,84,68,42.0,78.0],[90,180,90,84,45.0,86.5],[184,180,86,57,43.0,62.0],[274,180,77,66,38.5,70.5],[355,180,73,69,36.5,73.5],[432,180,73,69,36.5,73.0]],"hit":[[509,180,72,72,36.0,72.0],[585,180,82,66,40.5,66.5],[671,180,90,86,45.0,86.5],[765,180,91,66,45.5,68.5],[860,180,85,81,42.5,82.0],[949,180,87,59,43.5,59.0],[1040,180,83,65,41.5,65.0],[1127,180,72,72,36.0,72.5]],"fall":[[1203,180,72,72,36.0,72.0],[1279,180,77,70,38.5,73.5],[1360,180,87,64,44.0,75.0],[1451,180,83,74,41.5,81.0],[1538,180,83,56,41.5,73.0],[1625,180,82,42,41.0,58.5],[1711,180,82,40,41.0,57.5],[1797,180,82,40,41.0,57.5]],"death_ground":[[1883,180,82,40,41.0,57.5],[2,270,82,40,41.0,57.5],[88,270,82,40,41.0,57.5],[174,270,82,40,41.0,57.5],[260,270,82,40,41.0,57.5],[346,270,82,40,41.0,57.5],[432,270,82,40,41.0,57.5],[518,270,82,40,41.0,57.5]],"eat":[[604,270,72,72,36.0,72.0],[680,270,90,52,45.0,52.5],[774,270,88,58,44.0,58.0],[866,270,84,69,42.0,69.0],[954,270,87,66,43.5,66.0],[1045,270,84,68,42.5,68.5],[1133,270,87,66,43.5,66.0],[1224,270,82,72,41.5,72.5]],"walk":[[2,2,72,72,36.0,72.0],[78,2,72,72,36.0,72.5],[154,2,72,72,36.0,72.0],[230,2,74,71,37.0,71.0],[308,2,78,68,39.0,68.0],[390,2,78,67,39.5,67.0],[472,2,78,66,39.0,66.5],[554,2,78,66,39.0,66.5]],"death_fall":[[1203,180,72,72,36.0,72.0],[1279,180,77,70,38.5,73.5],[1360,180,87,64,44.0,75.0],[1451,180,83,74,41.5,81.0],[1538,180,83,56,41.5,73.0],[1625,180,82,42,41.0,58.5],[1711,180,82,40,41.0,57.5],[1797,180,82,40,41.0,57.5]],"kick_fall":[[1203,180,72,72,36.0,72.0],[1279,180,77,70,38.5,73.5],[1360,180,87,64,44.0,75.0],[1451,180,83,74,41.5,81.0],[1538,180,83,56,41.5,73.0],[1625,180,82,42,41.0,58.5],[1711,180,82,40,41.0,57.5],[1797,180,82,40,41.0,57.5]]}},"sarna":{"H":179.2,"T":149.4,"a":{"idle":[[2,2,155,175,78.0,175.5],[161,2,156,176,78.0,176.2],[321,2,155,176,78.0,177.0],[480,2,155,177,77.2,177.7],[639,2,155,179,78.0,179.2],[798,2,155,178,78.0,178.5],[957,2,155,176,78.0,177.0],[1116,2,155,176,78.0,176.2]],"alert":[[1275,2,155,175,78.0,175.5],[1434,2,161,171,80.2,171.7],[1599,2,152,178,75.7,178.5],[1755,2,152,182,75.7,183.0],[2,188,152,182,75.7,183.0],[158,188,152,182,75.7,183.0],[314,188,152,183,75.7,183.7],[470,188,152,183,75.7,183.7]],"walk":[[626,188,155,176,78.0,176.2],[785,188,156,176,78.0,176.2],[945,188,156,176,78.0,176.2],[1105,188,156,176,78.0,176.2],[1265,188,156,176,78.0,176.2],[1425,188,156,176,78.0,177.0],[1585,188,156,176,78.0,176.2],[1745,188,156,176,78.0,176.2]],"run":[[2,375,155,175,78.0,175.5],[161,375,155,175,78.0,175.5],[320,375,156,175,78.0,175.5],[480,375,156,175,78.0,175.5],[640,375,157,175,78.7,175.5],[801,375,151,194,75.7,194.2],[956,375,157,196,78.7,196.5],[1117,375,167,197,84.0,197.2]],"attack":[[1288,375,155,175,78.0,175.5],[1447,375,157,175,78.7,175.5],[1608,375,173,146,87.0,146.2],[1785,375,157,184,78.7,184.5],[2,576,144,179,72.0,179.2],[150,576,152,176,76.5,177.0],[306,576,153,178,76.5,178.5],[463,576,152,178,76.5,178.5]],"charge":[[619,576,155,175,78.0,175.5],[778,576,155,175,78.0,175.5],[937,576,155,176,78.0,176.2],[1096,576,155,174,78.0,174.7],[1255,576,159,175,79.5,175.5],[1418,576,165,173,82.5,174.0],[1587,576,177,161,88.5,161.2],[1768,576,191,153,96.0,153.7]],"jump":[[2,759,158,212,79.5,212.2],[164,759,156,206,78.0,212.2],[324,759,154,185,77.2,212.2],[482,759,155,173,78.0,212.2],[641,759,157,165,78.7,210.0],[802,759,160,173,80.2,207.7],[966,759,163,190,81.7,199.5],[1133,759,167,187,83.2,187.5]],"dodge":[[1304,759,158,203,79.5,203.2],[1466,759,164,164,82.5,204.0],[1634,759,161,155,80.2,181.5],[1799,759,161,137,81.0,137.2],[2,975,161,135,81.0,135.0],[167,975,164,150,82.5,150.0],[335,975,157,161,78.7,162.0],[496,975,160,156,79.5,156.7]],"kickback":[[660,975,155,175,78.0,175.5],[819,975,162,171,81.0,171.7],[985,975,157,185,78.7,185.2],[1146,975,164,166,82.5,166.5],[1314,975,206,156,103.5,156.7],[1524,975,158,177,79.5,177.7],[1686,975,156,178,78.7,178.5],[1846,975,156,178,78.7,178.5]],"hit":[[2,1164,155,175,78.0,175.5],[161,1164,160,173,80.2,174.0],[325,1164,154,171,76.5,171.7],[483,1164,193,188,96.7,189.0],[680,1164,163,161,81.7,162.0],[847,1164,155,178,78.0,178.5],[1006,1164,155,178,77.2,178.5],[1165,1164,155,178,77.2,178.5]],"kick_fall":[[1324,1164,155,175,78.0,175.5],[1483,1164,173,167,87.0,168.0],[1660,1164,185,59,93.0,66.7],[1849,1164,194,51,96.7,61.5],[2,1356,185,54,93.0,63.7],[191,1356,182,57,90.7,66.0],[377,1356,184,56,92.2,65.2],[565,1356,184,56,92.2,64.5]],"death_fall":[[753,1356,156,175,78.0,175.5],[913,1356,158,170,79.5,171.0],[1075,1356,158,143,80.2,144.0],[1237,1356,182,86,90.7,87.0],[1423,1356,181,71,90.0,72.0],[1608,1356,182,71,90.7,72.0],[1794,1356,181,71,90.0,72.0],[2,1535,182,71,90.7,72.0]],"death_ground":[[188,1535,181,71,90.0,72.0],[373,1535,181,71,90.0,72.0],[558,1535,182,71,90.7,72.0],[744,1535,182,71,90.7,72.0],[930,1535,182,71,90.7,72.0],[1116,1535,182,71,90.7,72.0],[1302,1535,182,71,90.7,72.0],[1488,1535,182,71,90.7,72.0]],"eat":[[1674,1535,155,175,78.0,175.5],[1833,1535,156,175,78.0,175.5],[2,1714,156,175,78.0,175.5],[162,1714,156,175,78.7,175.5],[322,1714,158,173,78.7,174.0],[484,1714,158,173,78.7,174.0],[646,1714,158,172,79.5,172.5],[808,1714,160,169,79.5,169.5]]}},"niedzwiedz":{"H":201.0,"T":184.2,"a":{"idle":[[2,2,239,197,120.7,198.0],[245,2,237,198,119.2,198.7],[486,2,236,196,118.5,197.2],[726,2,239,197,119.2,198.0],[969,2,240,199,120.7,198.7],[1213,2,240,199,120.7,199.5],[1457,2,242,200,121.5,201.0],[1703,2,241,200,120.7,200.2]],"alert":[[2,206,239,197,120.7,198.0],[245,206,242,201,121.5,202.5],[491,206,232,226,116.2,225.7],[727,206,246,199,123.7,200.2],[977,206,248,193,124.5,193.5],[1229,206,245,197,123.0,197.2],[1478,206,245,197,123.0,197.2],[1727,206,244,197,122.2,197.2]],"walk":[[2,436,239,197,120.0,198.0],[245,436,239,197,120.0,198.0],[488,436,242,194,120.7,195.7],[734,436,255,191,128.2,193.5],[993,436,252,190,126.0,193.5],[1249,436,239,194,119.2,198.0],[1492,436,241,194,120.7,198.0],[1737,436,242,195,121.5,192.7]],"run":[[2,637,239,197,120.7,198.7],[245,637,239,197,120.0,198.7],[488,637,240,193,120.7,193.5],[732,637,242,185,120.7,186.0],[978,637,239,188,120.0,189.0],[1221,637,238,195,119.2,196.5],[1463,637,260,195,129.7,201.0],[1727,637,248,186,124.5,193.5]],"attack":[[2,838,239,198,120.7,198.7],[245,838,235,194,117.7,195.0],[484,838,218,227,109.5,233.2],[706,838,247,181,124.5,186.0],[957,838,216,231,108.0,237.0],[1177,838,242,194,120.7,193.5],[1423,838,242,191,121.5,190.5],[1669,838,240,198,120.7,199.5]],"maul":[[2,1073,239,198,120.7,198.7],[245,1073,242,184,121.5,185.2],[491,1073,244,217,122.2,222.7],[739,1073,255,200,128.2,206.2],[998,1073,254,185,127.5,189.0],[1256,1073,218,240,109.5,245.2],[1478,1073,233,207,117.0,213.0],[1715,1073,230,212,115.5,218.2]],"slam":[[2,1317,239,197,120.7,198.7],[245,1317,228,205,114.7,210.7],[477,1317,221,241,111.0,246.7],[702,1317,245,187,123.0,177.7],[951,1317,245,197,123.0,192.7],[1200,1317,239,194,120.0,192.7],[1443,1317,239,199,120.7,199.5],[1686,1317,239,198,120.7,199.5]],"hit":[[2,1562,239,197,120.7,198.7],[245,1562,238,194,119.2,195.0],[487,1562,212,207,105.7,207.7],[703,1562,254,196,127.5,205.5],[961,1562,256,194,128.2,196.5],[1221,1562,258,194,129.0,195.7],[1483,1562,257,197,129.0,199.5],[1744,1562,257,198,129.0,199.5]],"stagger":[[2,1773,239,197,120.7,198.7],[245,1773,239,197,120.0,198.7],[488,1773,239,198,120.0,199.5],[731,1773,239,199,120.0,199.5],[974,1773,239,199,120.0,199.5],[1217,1773,239,197,120.0,198.7],[1460,1773,239,197,119.2,198.7],[1703,1773,239,197,119.2,198.7]],"death_fall":[[2,1976,239,198,120.7,198.7],[245,1976,246,196,123.7,197.2],[495,1976,276,131,138.7,130.5],[775,1976,275,128,138.7,127.5],[1054,1976,275,128,138.7,127.5],[1333,1976,275,127,138.7,126.7],[1612,1976,275,127,138.0,126.7],[2,2178,275,127,138.0,126.7]],"death_ground":[[281,2178,275,127,138.0,126.7],[560,2178,275,127,138.0,126.7],[839,2178,275,127,138.0,126.7],[1118,2178,275,127,138.0,126.7],[1397,2178,275,127,138.0,126.7],[1676,2178,275,127,138.0,126.7],[2,2309,275,127,138.0,126.7],[281,2309,275,127,138.0,126.7]],"eat":[[560,2309,239,197,120.7,198.7],[803,2309,245,181,123.0,182.2],[1052,2309,227,185,114.0,185.2],[1283,2309,228,185,114.0,186.0],[1515,2309,238,179,119.2,180.0],[1757,2309,245,181,123.7,181.5],[2,2510,239,212,120.7,212.2],[245,2510,245,198,123.0,198.7]]}}};
+const ANI={};
+function mkAnimal(id,o){const m=ZAM[id];const t=ZT[id]=Object.assign({H:m.T,eat:0,w:0,sp:1,meta:{H:m.H,a:m.a},card:'a/npc/karta_'+id+'.webp',animal:true},o);
+  t.img=loadImg('a/npc/'+id+'.webp');if(okI(t.img))t.ok=true;else t.img.addEventListener('load',()=>{t.ok=true})}
+mkAnimal('pies',{n:'Kundel',hp:2.8,eat:.3,spd:'bardzo szybki',sub:'Uskakuje przed ciosem i wyje na alarm',
+  text:'Biegał po osiedlu bez smyczy, dopóki ktoś nie przestał go karmić. Teraz jest głodny i zwinny. Rzuca się do gardła z kilku metrów, a ugryzienie krwawi. Potrafi uskoczyć przed ciosem i od razu kontrować. Z daleka wyje, a wycie ściąga każdego zombie w okolicy.',
+  kvx:'<span>Z daleka</span><span>skok z kilku metrów, wycie przyciąga zombie</span><span>Występuje</span><span>miasto, park</span>'});
+mkAnimal('kot',{n:'Dachowiec',hp:1.8,eat:.3,spd:'bardzo szybki',sub:'Skacze z góry, wstaje po śmierci',
+  text:'Mieszkał na dachu bloku i nikomu się nie tłumaczył. Teraz syczy, atakuje skokiem z wysokości głowy i robi salto w tył przed ciosem. Po pierwszej śmierci leży chwilę, a potem wstaje. Trzeba go dobić drugi raz. Kruchy, ale zwinny.',
+  kvx:'<span>Szczególne</span><span>wstaje raz po śmierci, unika ciosów</span><span>Występuje</span><span>miasto, park</span>'});
+mkAnimal('szczur',{n:'Szczur piwniczny',hp:.45,eat:.3,spd:'szybki',sub:'Stado, jedno uderzenie, wyłazi ze skrzynek',
+  text:'Wyrosły na odpadkach i nie boją się już niczego. Chodzą stadami po trzy do pięciu. Wyłażą ze skrzynek, gdy się je przeszukuje, i przechodzą pod barykadami. Jedno uderzenie wystarcza, ale gryzą w kostki i zwalniają ofiarę.',
+  kvx:'<span>Szczególne</span><span>przechodzą pod blokadami, gryzą w kostki</span><span>Występuje</span><span>miasto</span>'});
+mkAnimal('kruk',{n:'Zwiadowca',hp:.6,eat:.3,spd:'lata',sub:'Krakaniem ściąga zombie, nurkuje na oczy',
+  text:'Siedzi na dachach i obserwuje. Gdy zobaczy żywego, krzyczy tak, że słychać go w całej okolicy, a zombie ruszają w tę stronę. Potem krąży i nurkuje na twarz: ledwie rani, ale na chwilę zasłania ci oczy. Wysoko jest poza zasięgiem.',
+  kvx:'<span>Z daleka</span><span>alarm krakaniem, nurkowanie na twarz</span><span>Występuje</span><span>miasto, park, las</span>'});
+mkAnimal('sarna',{n:'Rogacz',hp:3.4,eat:.3,spd:'bardzo szybka',sub:'Płochliwa, szarżuje i przewraca',
+  text:'Wyszła z lasu do miasta i nie wróciła. Biega zrywami, staje, nasłuchuje, i znowu rusza. Z kilku metrów szarżuje z opuszczonym łbem i przewraca, a potem kopie kopytami. Przeskakuje niskie barykady i uskakuje przed ciosem.',
+  kvx:'<span>Szczególne</span><span>szarża przewraca i zwalnia, skacze nad barykadami</span><span>Występuje</span><span>las, park</span>'});
+mkAnimal('niedzwiedz',{n:'Brunatny',hp:14,eat:.3,spd:'wolny, w szale szybki',sub:'Ryk ściąga wszystkich, rozwala blokady',
+  text:'Najgorsze, co może wyjść z lasu. Wstaje na tylne łapy i ryczy tak, że zbiegają się wszystkie zombie w okolicy. Uderza łapą, miażdży w uścisku i wali w ziemię. Poniżej połowy zdrowia wpada w szał. Rozwala drzwi i blokady. Nie da się go zabić po cichu.',
+  kvx:'<span>Szczególne</span><span>ryk alarmuje okolicę, szał poniżej połowy zdrowia</span><span>Występuje</span><span>las</span>'});
+/* --- narzędzia --- */
+const asnd=(z,k,v)=>snd(z.type+'_'+k,z.x,v==null?.7:v);
+const aAct=z=>{const a=z.act;z.an={n:a.k2||a.k,i:Math.min(7,Math.floor(a.t/a.dur*8))}};
+const aLoop=(z,n,fps)=>{z.an={n,i:Math.floor((time+z.ph)*(fps||8))%8}};
+const aWalk=(z,n,m)=>{z.an={n,i:Math.floor(z.walkP*(m||1))%8}};
+function aGo(z,tx,tf,sp,dt,ign){
+  if(ign&&tf===z.f&&!z.stair){const d=tx-z.x;if(Math.abs(d)<6){z.moving=false;return'arrived'}z.face=Math.sign(d);z.x=clamp(z.x+Math.sign(d)*Math.min(Math.abs(d),sp*dt),40,WORLD_W-40);z.moving=true;z.walkP+=dt*sp*.075;return'moving'}
+  return goTo(z,tx,tf,sp,dt)}
+function blkAhead(z,dir,range){let b=null,bd=1e9;for(const bl of blockersOn(z.f)){if(bl.door&&bl.open)continue;const d=(bl.x-z.x)*dir;if(d>-4&&d<range&&d<bd){bd=d;b=bl}}return b}
+function aTip(key,txt,ms){G.aniTip=G.aniTip||{};if(G.aniTip[key])return;G.aniTip[key]=1;toast(txt,ms||2800)}
+function aKnock(z,dmg,push,slow){const p=player;if(p.dead||p.inv>0)return false;hurtPlayer(dmg,z);moveEnt(p,(Math.sign(p.x-z.x)||1)*push);if(slow)p.slowT=Math.max(p.slowT||0,slow);return true}
+function lightHurt(z,dmg){const p=player;if(p.inv>0||p.dead)return false;p.hp-=dmg;p.inv=.4;p.hurt=.2;shake=Math.max(shake||0,5);flashT=Math.max(flashT||0,.2);sfx('hurt');
+  for(let i=0;i<4;i++)blood(p.x,p.y-60,p.f,Math.sign(p.x-z.x)||1);p.search=null;p.peek=null;if(p.atk>0)p.atk=0;if(p.hp<=0)die();return true}
+function aBleed(p){if(!p.dead&&!p.wound&&R()<.7*(p.woundM||1)){p.wound=true;showState('Rana szarpana')}}
+const aSame=(z,p)=>z.f===p.f&&!p.stair&&!z.stair&&!p.dead&&!p.hidden&&!p.climb;
+/* --- klatki --- */
+zFrame=(function(_f){return function(z){
+  if(z.type&&ANI[z.type]&&z.an&&!z.dead&&!z.down&&!(z.hitT>0)&&z.state!=='killed')return[z.an.n,z.an.i];
+  return _f(z)}})(zFrame);
+zGroan=(function(_g){return function(z){if(ANI[z.type]){if(z.eating)return asnd(z,'je',.5)||true;return asnd(z,'jek',.6)||true}return _g(z)}})(zGroan);
+zRoar=(function(_r){return function(z){if(ANI[z.type])return asnd(z,'ryk',.8)||true;return _r(z)}})(zRoar);
+/* --- główna pętla zwierzęcia --- */
+function animalAI(z,dt){
+  const A=ANI[z.type];if(!A)return false;
+  if(z.dead){if(A.rev)revTick(z,dt);return false}
+  if(z.state==='killed'||z.stair||z.down||z.stagger>0){if(z.dcd>0)z.dcd-=dt;return false}
+  if(z.hitT>0)z.hitT-=dt;if(z.dcd>0)z.dcd-=dt;if(z.inv>0)z.inv-=dt;
+  const p=player;
+  if(A.custom)return A.custom(z,dt)||true;
+  if(z.act){A.act(z,dt*(z.ts||1));return true}
+  z.groanT-=dt;if(z.groanT<0){z.groanT=6+R()*14;if(Math.abs(z.x-p.x)<700)zGroan(z)}
+  const vis=canSee(z),dist=Math.abs(p.x-z.x),night=phase()>.6;
+  if(z.state!=='chase'&&z.state!=='attack'){
+    if(vis>0){z.sus+=vis*dt*(dist<130?4:2.3)*(A.sense||1);if(z.state==='idle'||z.state==='wander')z.face=Math.sign(p.x-z.x)||z.face}
+    else z.sus=Math.max(0,z.sus-dt*.22);
+    if(z.sus>=1||(vis>=1&&dist<40))toChase(z);
+    else if(z.sus>.4&&vis>0&&z.state!=='investigate'){z.state='investigate';z.tx=p.x;z.tf=p.f;z.look=3}
+  }else{
+    if(vis>0){z.lastSeen=0;z.tx=p.x;z.tf=p.f}else{z.lastSeen+=dt;if(z.lastSeen<1.2&&!p.hidden){z.tx=p.x;z.tf=p.f}
+      if(z.lastSeen>4){z.state='investigate';z.look=3.5;z.sus=.6}}}
+  if(z.wasCalm&&(z.state==='investigate'||z.state==='chase')){z.wasCalm=false;z.eating=false;z.face=Math.sign(z.tx-z.x)||z.face;
+    z.alT=A.alT||.85;z.alertT=z.alT;if(A.alert&&A.alert(z,p,dist)){return true}}
+  if(z.alertT>0){z.alertT-=dt;z.moving=false;z.an={n:'alert',i:Math.min(7,Math.floor((1-z.alertT/z.alT)*8))};z.face=Math.sign(z.tx-z.x)||z.face;return true}
+  z.wasCalm=(z.state==='idle'||z.state==='wander');
+  switch(z.state){
+    case'idle':z.moving=false;if(!z.eating){z.t-=dt;if(z.t<0){if(R()<.5){z.face*=-1;z.t=2+R()*4}else{z.state='wander';const[l,r]=regionBounds(z.x,z.f);z.tx=clamp(z.x+(R()*2-1)*260,l,r);z.tf=z.f}}}
+      aLoop(z,z.eating?'eat':'idle',z.eating?8:6);break;
+    case'wander':if(aGo(z,z.tx,z.tf,A.wan,dt,A.ign)==='arrived'){z.state='idle';z.t=2+R()*5}if(z.moving)aLoop(z,'walk',6);else aLoop(z,'idle',6);break;
+    case'investigate':{const r=aGo(z,z.tx,z.tf,A.inv,dt,A.ign);if(r==='arrived'){z.look-=dt;z.moving=false;if((z.look*1.3|0)!==((z.look+dt)*1.3|0))z.face*=-1;if(z.look<=0){z.state='idle';z.t=3+R()*4;z.sus=Math.min(z.sus,.3)}}
+      if(z.moving)aLoop(z,A.invRun?'run':'walk',A.invRun?11:8);else aLoop(z,'idle',6);break}
+    case'chase':case'attack':z.state='chase';A.chase(z,dt,p,dist,night);break}
+  return true}
+updZombie=(function(_u){return function(z,dt){
+  if(ANI[z.type]&&animalAI(z,dt))return;
+  return _u(z,dt)}})(updZombie);
+/* przeciwnicy odporni na cios (unik, wysoko latający kruk) */
+function aImmune(z){const A=ANI[z.type];return !!(A&&(z.inv>0||(A.high&&A.high(z))))}
+wTargets=(function(_w){return function(w,both,reach){const L=_w(w,both,reach);if(!L.length)return L;
+  return L.filter(z=>{const A=ANI[z.type];if(!A)return true;if(aImmune(z))return false;
+    if(A.dodge&&!w.ranged&&z.state==='chase'&&!(z.dcd>0)&&!z.dead&&(!z.act||(z.act.t<.3&&['bite','swipe','kick','kickback','hiss'].includes(z.act.k)))&&aSame(z,player)&&R()<A.dodge){A.startDodge(z);return false}return true})}})(wTargets);
+hitZ=(function(_h){return function(z,d,dir,kb){const A=ANI[z.type];_h(z,d,dir,kb);
+  if(A&&!z.dead){if(A.poise){z.stagger=0;z.kb*=.15;z.hitT=Math.min(z.hitT,.3)}if(A.onHit)A.onHit(z)}}})(hitZ);
+killTarget=(function(_k){return function(){const k=_k();return k&&ANI[k.type]?null:k}})(killTarget);
+killZombie=(function(_k){return function(z,dir){_k(z,dir);if(ANI[z.type]){z.jy=0;z.act=null;z.an=null;if(ANI[z.type].rev&&!z.revived&&!z.crushed)z.revT=3+R()*1.2;if(z.type==='kruk')featherBurst(z.x,z.y-40,10)}}})(killZombie);
+/* ---------- PIES ---------- */
+ANI.pies={wan:34,inv:125,run:255,sense:1.4,wm:.8,rm:.5,invRun:false,dodge:.4,
+  alert(z,p,dist){if(dist>250&&!z.howled&&R()<.65){z.howled=true;z.alertT=0;z.act={k:'howl',t:0,dur:1.2};return true}return false},
+  startDodge(z){z.act={k:'dodge',t:0,dur:.6};z.inv=.7;z.dcd=3;z.dodgeDir=-(Math.sign(player.x-z.x)||z.face)},
+  act(z,dt){const a=z.act,p=player;a.t+=dt;z.moving=false;aAct(z);
+    if(a.k==='howl'){if(!a.f&&a.t>.45){a.f=1;asnd(z,'wycie',.9);emitNoise(z.x,z.f,950,'zombie');aTip('pies','Pies wyje. Zombie z okolicy ruszą w tę stronę.',3000)}}
+    else if(a.k==='bite'){if(!a.f&&a.t>.4){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<62&&aKnock(z,9,14))aBleed(p)}}
+    else if(a.k==='leap'){const u=clamp((a.t-.12)/.45,0,1);moveEnt(z,(lerp(a.x0,a.tx,smooth(u))-z.x));
+      if(!a.f&&a.t>.5){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<60&&aKnock(z,11,22)){aBleed(p);aTip('pies','Pies gryzie do krwi. Uciekaj albo bij pierwszy.',2800)}}}
+    else if(a.k==='dodge'){if(a.t<.45)moveEnt(z,a.dodgeDir*dt*190)}
+    if(a.t>=a.dur){z.act=null;if(a.k==='dodge'){z.counter=true;z.face=Math.sign(p.x-z.x)||z.face}}},
+  chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
+    if(ok&&z.counter&&dist<170){z.counter=false;z.face=dir;z.act={k:dist>80?'leap':'bite',k2:dist>80?'leap':'attack',t:0,dur:dist>80?.75:.8,x0:z.x,tx:p.x-dir*34};asnd(z,'atak',.7);return}
+    if(ok&&dist<52){z.face=dir;z.act={k:'bite',k2:'attack',t:0,dur:.8};asnd(z,'atak',.7);return}
+    if(ok&&dist>105&&dist<190&&z.cd<=0&&!blkAhead(z,dir,dist)){z.cd=2.4+R()*1.6;z.face=dir;z.act={k:'leap',t:0,dur:.75,x0:z.x,tx:p.x+(p.moving?p.face*30:0)-dir*30};asnd(z,'skok',.8);return}
+    const r=aGo(z,z.tx,z.tf,ANI.pies.run*(night?1.08:1),dt);if(r==='arrived'&&z.lastSeen>1.2){z.state='investigate';z.look=3}
+    if(z.moving)aWalk(z,'run',ANI.pies.rm);else aLoop(z,'idle',6)}};
+/* ---------- KOT ---------- */
+ANI.kot={wan:32,inv:130,run:240,sense:1.2,wm:.8,rm:.5,dodge:.4,rev:true,
+  alert(z,p,dist){if(R()<.5){z.alertT=0;z.act={k:'hiss',t:0,dur:.9};return true}return false},
+  startDodge(z){z.act={k:'dodge',t:0,dur:.8};z.inv=.85;z.dcd=3;z.dodgeDir=-(Math.sign(player.x-z.x)||z.face)},
+  act(z,dt){const a=z.act,p=player;a.t+=dt;z.moving=false;aAct(z);
+    if(a.k==='hiss'){if(!a.f&&a.t>.25){a.f=1;asnd(z,'syk',.8);emitNoise(z.x,z.f,160,'zombie')}}
+    else if(a.k==='swipe'){if(!a.f&&a.t>.35){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<58)aKnock(z,7,10)}}
+    else if(a.k==='pounce'){const u=clamp((a.t-.2)/.5,0,1);moveEnt(z,(lerp(a.x0,a.tx,smooth(u))-z.x));
+      if(!a.f&&a.t>.62){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<62&&aKnock(z,10,26)){aBleed(p);aTip('kot','Kot skoczył z góry. Przy kocie nie stój w miejscu.',2800)}}}
+    else if(a.k==='dodge'){if(a.t>.15&&a.t<.7)moveEnt(z,a.dodgeDir*dt*230)}
+    else if(a.k==='revive'){if(a.t>=a.dur){z.revT=null}}
+    if(a.t>=a.dur){z.act=null;if(a.k==='dodge'){z.counter=true;z.face=Math.sign(p.x-z.x)||z.face}}},
+  chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
+    if(ok&&z.counter&&dist<230){z.counter=false;z.face=dir;z.act={k:'pounce',t:0,dur:.9,x0:z.x,tx:p.x-dir*30};asnd(z,'atak',.7);return}
+    if(ok&&dist<50){z.face=dir;z.act={k:'swipe',k2:'attack',t:0,dur:.7};asnd(z,'atak',.7);return}
+    if(ok&&dist>110&&dist<250&&z.cd<=0&&!blkAhead(z,dir,dist)){z.cd=3+R()*2;z.face=dir;z.act={k:'pounce',t:0,dur:.9,x0:z.x,tx:p.x+(p.moving?p.face*26:0)-dir*30};asnd(z,'atak',.8);return}
+    const r=aGo(z,z.tx,z.tf,ANI.kot.run*(night?1.08:1),dt);if(r==='arrived'&&z.lastSeen>1.2){z.state='investigate';z.look=3}
+    if(z.moving)aWalk(z,'run',ANI.kot.rm);else aLoop(z,'idle',6)}};
+function revTick(z,dt){if(z.revT==null)return;z.revT-=dt;if(z.revT>0)return;
+  z.dead=false;z.revived=true;z.revT=null;z.hp=1;kills=Math.max(0,kills-1);z.fall=0;z.da=null;z.state='chase';z.sus=1;z.hitT=0;z.stagger=0;z.down=null;z.inv=1;
+  z.tx=player.x;z.tf=player.f;z.lastSeen=0;z.wasCalm=false;z.alertT=0;z.act={k:'revive',t:0,dur:1.0};asnd(z,'ozywa',.8);aTip('kot','Kot wstał po śmierci. Trzeba go dobić drugi raz.',3000)}
+/* ---------- SZCZUR ---------- */
+ANI.szczur={wan:40,inv:150,run:215,sense:1.3,wm:.7,rm:.5,ign:true,invRun:true,
+  alert(z,p,dist){for(const o of zombies)if(o!==z&&o.type==='szczur'&&!o.dead&&o.f===z.f&&Math.abs(o.x-z.x)<380&&o.state!=='chase'){o.state='chase';o.sus=1;o.lastSeen=0;o.tx=p.x;o.tf=p.f;o.wasCalm=false;o.eating=false;o.alertT=0}
+    aTip('szczur','Szczury chodzą stadem. Jedno uderzenie zabija, ale gryzą w kostki.',3000);return false},
+  act(z,dt){const a=z.act,p=player;a.t+=dt;z.moving=false;aAct(z);
+    if(a.k==='bite'){if(a.t>.1&&a.t<.4)moveEnt(z,z.face*dt*70);
+      if(!a.f&&a.t>.28){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<54&&lightHurt(z,3)){p.slowT=Math.max(p.slowT||0,2.4);aTip('szczur2','Ugryzienie w kostkę zwalnia.',2200)}}}
+    if(a.t>=a.dur)z.act=null},
+  chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
+    if(ok&&dist<46&&z.cd<=0){z.cd=.9+R()*.4;z.face=dir;z.act={k:'bite',k2:'attack',t:0,dur:.55};asnd(z,'atak',.5);return}
+    if(ok&&dist<46){z.moving=false;aLoop(z,'idle',8);return}
+    const r=aGo(z,z.tx,z.tf,ANI.szczur.run*(night?1.08:1),dt,true);if(r==='arrived'&&z.lastSeen>1.2){z.state='investigate';z.look=3}
+    if(z.moving)aWalk(z,'run',ANI.szczur.rm);else aLoop(z,'idle',8)}};
+/* ---------- KRUK ---------- */
+let DARKT=0;const FEA=[];
+function featherBurst(x,y,n){for(let i=0;i<n;i++)FEA.push({x,y,vx:(R()-.5)*160,vy:-30-R()*90,r:R()*6,vr:(R()-.5)*8,t:0,life:1.3+R()*.8})}
+ANI.kruk={high:z=>z.rv&&z.rv.s!=='perch'&&z.jy<-34,
+  custom(z,dt){
+    const p=player,v=z.rv||(z.rv={s:'perch',t:0,dives:0,alt:0,side:1}),dist=Math.abs(p.x-z.x),dir=Math.sign(p.x-z.x)||z.face;
+    v.t+=dt;
+    if(v.s==='perch'){z.moving=false;z.jy=0;
+      const vis=canSee(z);if(vis>0)z.sus+=vis*dt*(dist<130?4:2.3)*1.3;else z.sus=Math.max(0,z.sus-dt*.22);
+      if(z.sus>=1||z.state==='investigate'||z.state==='chase'){v.s='caw';v.t=0;z.face=dir;z.eating=false;z.state='chase';z.wasCalm=false;return true}
+      z.t-=dt;if(z.t<0){z.t=2+R()*4;z.eating=R()<.4;if(R()<.3)z.face*=-1}
+      if(z.eating)aLoop(z,'eat',8);else aLoop(z,'idle',6);return true}
+    if(v.s==='caw'){z.moving=false;z.face=dir;z.an={n:'alert',i:Math.min(7,Math.floor(v.t/1.0*8))};
+      if(!v.f&&v.t>.35){v.f=1;asnd(z,'alarm',1)||asnd(z,'ryk',1);emitNoise(z.x,z.f,150,'zombie');
+        let n=0;for(const o of zombies){if(o===z||o.dead||o.state==='killed'||o.state==='chase'||o.state==='attack'||ANI[o.type]||o.f!==z.f)continue;if(Math.abs(o.x-z.x)>1000)continue;o.state='investigate';o.tx=p.x+(R()*60-30);o.tf=p.f;o.look=3+R()*2;o.sus=Math.max(o.sus,.5);n++}
+        aTip('kruk','Kruk zakrakał. Zombie ruszają w twoją stronę. Uważaj na nurkowanie.',3200)}
+      if(v.t>=1.0){v.s='take';v.t=0}return true}
+    if(v.s==='take'){z.moving=false;z.an={n:'takeoff',i:Math.min(7,Math.floor(v.t/.9*8))};z.x=clamp(z.x+z.face*dt*45,50,WORLD_W-50);z.jy=0;
+      if(v.t>=.9){v.s='fly';v.t=0;v.alt=44;v.dt=1.8+R()*1.2;v.side=R()<.5?1:-1}return true}
+    z.moving=true;
+    if(v.s==='fly'){const tx=p.x+v.side*230;const dx=tx-z.x,vx=clamp(dx*2.2,-200,200);z.x=clamp(z.x+vx*dt,50,WORLD_W-50);if(Math.abs(vx)>20)z.face=Math.sign(vx);
+      const ta=112+Math.sin(time*2.3+z.ph)*14;v.alt=lerp(v.alt,ta,Math.min(1,dt*2));z.jy=-v.alt;aLoop(z,'fly',12);
+      if(v.t>v.dt&&aSame(z,p)&&dist<330){v.s='dive';v.t=0;v.x0=z.x;v.tx=p.x+(p.moving?p.face*34:0);v.a0=v.alt;z.face=Math.sign(v.tx-z.x)||z.face;asnd(z,'nurkowanie',.8)}
+      return true}
+    if(v.s==='dive'){const u=v.t/.85;z.an={n:'dive',i:Math.min(7,Math.floor(u*8))};
+      if(v.t<.55){z.x=clamp(lerp(v.x0,v.tx,smooth(v.t/.55)),50,WORLD_W-50);v.alt=lerp(v.a0,62,smooth(v.t/.55))}
+      else{z.x=clamp(z.x+z.face*dt*150,50,WORLD_W-50);v.alt=lerp(62,118,smooth(clamp((v.t-.55)/.3,0,1)))}
+      z.jy=-v.alt;
+      if(!v.f&&v.t>.5){v.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<46&&lightHurt(z,3)){DARKT=1.3;featherBurst(p.x+z.face*-8,p.y-130,8);asnd(z,'dziob',.8);aTip('kruk2','Kruk dziobnął cię w oczy. Przez chwilę nic nie widzisz.',2800)}}
+      if(v.t>=.85){v.dives++;v.f=0;v.t=0;if(v.dives>=3){v.s='away';z.face=z.x<WORLD_W/2?-1:1}else{v.s='fly';v.dt=2.4+R()*2;v.side=-v.side}}
+      return true}
+    if(v.s==='away'){z.x=clamp(z.x+z.face*dt*260,30,WORLD_W-30);v.alt=lerp(v.alt,150,Math.min(1,dt*1.5));z.jy=-v.alt;aLoop(z,'fly',12);
+      if(z.x<=60||z.x>=WORLD_W-60||Math.abs(z.x-(camX+viewW/2))>viewW/2+500){z.state='killed';z.gone=true;setTimeout(()=>{zombies=zombies.filter(q=>q!==z)},0)}return true}
+    return true}};
+const _updSpitFx0=updSpitFx;
+updSpitFx=function(dt){_updSpitFx0(dt);if(DARKT>0)DARKT-=dt;
+  for(const f of FEA){f.t+=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=140*dt;f.vx*=.985;f.r+=f.vr*dt}for(let i=FEA.length-1;i>=0;i--)if(FEA[i].t>FEA[i].life)FEA.splice(i,1)};
+const _drawSpitFx0=drawSpitFx;
+drawSpitFx=function(){_drawSpitFx0();const c=ctx;
+  for(const f of FEA){c.save();c.globalAlpha=Math.min(1,(f.life-f.t)*2);c.translate(f.x,f.y);c.rotate(f.r);c.fillStyle='#14161a';c.beginPath();c.ellipse(0,0,7,2.2,0,0,7);c.fill();c.restore()}
+  if(DARKT>0){c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=Math.min(1,DARKT*2.4)*.84;c.fillStyle='#050608';c.fillRect(0,0,c.canvas.width,c.canvas.height);c.restore()}};
+/* ---------- SARNA ---------- */
+ANI.sarna={wan:36,inv:130,run:262,sense:1.2,wm:.9,rm:.6,dodge:.35,
+  alT:.9,
+  startDodge(z){z.act={k:'dodge',t:0,dur:.7};z.inv=.8;z.dcd=3;z.dodgeDir=-(Math.sign(player.x-z.x)||z.face)},
+  act(z,dt){const a=z.act,p=player;a.t+=dt;z.moving=false;
+    if(a.k==='charge'){z.an={n:'charge',i:Math.floor(a.t*14)%8};z.moving=true;const sp=Math.min(350,140+a.t*480);
+      if(!a.hit){moveEnt(z,a.dir*sp*dt);
+        if(aSame(z,p)&&Math.abs(p.x-z.x)<52&&(p.x-z.x)*a.dir>-20){a.hit=true;a.t=Math.max(a.t,a.dur-.5);
+          if(aKnock(z,12,120,1.8)){shake=Math.max(shake||0,10);aTip('sarna','Sarna cię staranowała. Po szarży stoi chwilę w miejscu.',3000)}}}
+      else{z.moving=false;z.an={n:'idle',i:Math.floor(time*8)%8}}
+      if(a.t>=a.dur){z.act=null;z.cd=4+R()*2;z.pause=.5;z.moving=false}return}
+    aAct(z);
+    if(a.k==='kick'){if(!a.f&&a.t>.4){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<66)aKnock(z,8,18)}}
+    else if(a.k==='kickback'){if(!a.f&&a.t>.35){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<78)aKnock(z,9,30)}}
+    else if(a.k==='jump'){const u=clamp((a.t-.12)/.55,0,1);z.x=clamp(lerp(a.x0,a.tx,smooth(u)),40,WORLD_W-40)}
+    else if(a.k==='dodge'){if(a.t<.5)moveEnt(z,a.dodgeDir*dt*200)}
+    if(a.t>=a.dur){z.act=null;if(a.k==='dodge'){z.counter=true;z.face=Math.sign(p.x-z.x)||z.face}}},
+  chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
+    if(z.pause>0){z.pause-=dt;z.moving=false;z.face=dir;aLoop(z,'idle',8);return}
+    if(ok&&z.counter&&dist<150){z.counter=false;z.face=dir;z.act={k:'kick',k2:'attack',t:0,dur:.8};asnd(z,'atak',.7);return}
+    if(ok&&dist<56){z.face=dir;z.act=R()<.4?{k:'kickback',t:0,dur:.8}:{k:'kick',k2:'attack',t:0,dur:.8};asnd(z,'atak',.7);return}
+    if(ok&&dist>150&&dist<390&&z.cd<=0&&!blkAhead(z,dir,dist)){z.face=dir;z.act={k:'charge',t:0,dur:1.3,dir};asnd(z,'szarza',.85);return}
+    const b=blkAhead(z,dir,64);
+    if(b&&!b.door&&z.f===p.f){z.act={k:'jump',t:0,dur:.85,x0:z.x,tx:b.x+dir*80};z.face=dir;asnd(z,'skok',.7);return}
+    z.run=(z.run==null?1.1:z.run)-dt;if(z.run<=0){z.pause=.4+R()*.3;z.run=1+R()*.9;return}
+    const r=aGo(z,z.tx,z.tf,ANI.sarna.run*(night?1.08:1),dt);if(r==='arrived'&&z.lastSeen>1.2){z.state='investigate';z.look=3}
+    if(z.moving)aWalk(z,'run',ANI.sarna.rm);else aLoop(z,'idle',8)}};
+/* ---------- NIEDŹWIEDŹ ---------- */
+ANI.niedzwiedz={wan:30,inv:110,sense:1,wm:.7,rm:.45,poise:true,alT:1.3,
+  alert(z,p,dist){z.alertT=0;z.act={k:'roar',k2:'alert',t:0,dur:1.3};return true},
+  onHit(z){if(!z.rageA&&z.hp<ZT.niedzwiedz.hp*.5){z.rageA=true;z.ts=1.25;aTip('nied2','Niedźwiedź wpadł w szał. Jest szybszy i nic go nie zatrzymuje.',3200);emitNoise(z.x,z.f,500,'zombie')}},
+  act(z,dt){const a=z.act,p=player;a.t+=dt;z.moving=false;aAct(z);
+    if(a.k==='roar'){if(!a.f&&a.t>.5){a.f=1;asnd(z,'ryk',1);shake=Math.max(shake||0,5);emitNoise(z.x,z.f,1000,'zombie');aTip('nied','Niedźwiedź ryczy. Zbiega się cała okolica. Nie walcz z nim na otwartej przestrzeni.',3600)}}
+    else if(a.k==='swipe'){if(!a.f&&a.t>.5){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<108&&(p.x-z.x)*z.face>-30)aKnock(z,15,50)}}
+    else if(a.k==='maul'){if(!a.f&&a.t>.65){a.f=1;if(aSame(z,p)&&Math.abs(p.x-z.x)<76&&aKnock(z,22,12,2.2)){aBleed(p);shake=Math.max(shake||0,10)}}}
+    else if(a.k==='slam'){if(!a.f&&a.t>.65){a.f=1;shake=Math.max(shake||0,14);asnd(z,'uderzenie',.9);emitNoise(z.x,z.f,520,'combat');
+      if(aSame(z,p)&&Math.abs(p.x-z.x)<160&&aKnock(z,12,46,1.6)){}
+      if(a.bl)bearSmash(z,a.bl)}}
+    if(a.t>=a.dur){z.act=null;z.cd=(z.rageA?.8:1.6)+R()}},
+  chase(z,dt,p,dist,night){z.cd=(z.cd||0)-dt;z.scd=(z.scd||0)-dt;const ok=aSame(z,p),dir=Math.sign(p.x-z.x)||z.face;
+    if(ok&&dist<125&&z.cd<=0){z.face=dir;asnd(z,'atak',.8);
+      if(dist<64&&R()<.45)z.act={k:'maul',t:0,dur:1.3};
+      else if(z.scd<=0&&R()<.4){z.scd=6;z.act={k:'slam',t:0,dur:1.2}}
+      else z.act={k:'swipe',k2:'attack',t:0,dur:.95};return}
+    const b=blkAhead(z,dir,70);
+    if(b&&(b.door||b.f===0)&&z.cd<=0){z.face=dir;z.act={k:'slam',t:0,dur:1.2,bl:b};return}
+    const sp=z.rageA?255:(dist>300?125:205);
+    const r=aGo(z,z.tx,z.tf,sp*(night?1.06:1),dt);if(r==='arrived'&&z.lastSeen>1.2){z.state='investigate';z.look=3}
+    if(z.moving)aWalk(z,sp<150?'walk':'run',sp<150?ANI.niedzwiedz.wm:ANI.niedzwiedz.rm);else aLoop(z,'idle',6)}};
+function bearSmash(z,bl){if(bl.door){bl.open=true;emitNoise(bl.x,bl.f,300,'door');snd('drzwi_wywazanie',bl.x,.9)||sfx('door',bl.x)}
+  else if(bl.f===0&&walls.indexOf(bl)>=0){walls.splice(walls.indexOf(bl),1);emitNoise(bl.x,bl.f,420,'door');aTip('nied3','Niedźwiedź rozwalił blokadę.',2600)}}
+/* ---------- pojawianie się zwierząt na poziomie ---------- */
+const AN_CITY=['srodmiescie','blokowisko','osiedle_domkow','centrum_handlowe','warsztaty','zaklad_okien','baza_kurierska'];
+const AN_FOREST=['las_podnoze','szlak_gorski'];
+function pickAnimal(id){const city=AN_CITY.includes(id),forest=AN_FOREST.includes(id),park=id==='park';let L;
+  if(forest)L=[['sarna',.4],['niedzwiedz',.25],['kruk',.2],['pies',.15]];
+  else if(park)L=[['sarna',.3],['kruk',.3],['pies',.2],['kot',.2]];
+  else L=[['pies',.32],['kot',.26],['szczur',.24],['kruk',.18]];
+  let r=R();for(const[k,w]of L){if((r-=w)<0)return k}return L[0][0]}
+function mkAni(type,x,face){const z=newZombie(x,0,face||(R()<.5?1:-1),type);z.sus=0;if(type==='kruk'){z.eating=false;z.rv={s:'perch',t:0,dives:0,alt:0,side:1}}zombies.push(z);return z}
+function spawnAnimals(){
+  if(!LV)return;const id=LV.id,forest=AN_FOREST.includes(id);
+  const n=(R()<.55?1:0)+(R()<.45?1:0)+(forest&&R()<.3?1:0)||1;let bears=0;
+  for(let i=0;i<n;i++){let t=pickAnimal(id);if(t==='niedzwiedz'&&bears++)t='sarna';
+    let x=0,ok=false;for(let k=0;k<30&&!ok;k++){x=700+R()*(WORLD_W-1600);ok=!bAt(x,0)&&Math.abs(x-LVX.startX)>800}if(!ok)continue;
+    if(t==='szczur'){const m=3+((R()*3)|0);for(let j=0;j<m;j++){const z=mkAni('szczur',x+j*30+R()*14);z.eating=R()<.6}}
+    else{const z=mkAni(t,x);z.eating=ANI[t].rev||t==='pies'||t==='sarna'?R()<.4:false}}}
+/* szczury wyłażą ze skrzynek przy przeszukiwaniu */
+finishSearch=(function(_f){return function(c){_f(c);
+  try{if(G.raid&&!G.inBase&&LV&&AN_CITY.includes(LV.id)&&(G.ratEv||0)<2&&R()<.13&&c&&c.f===0){G.ratEv=(G.ratEv||0)+1;
+    const m=2+((R()*2)|0);for(let j=0;j<m;j++){const z=mkAni('szczur',c.x+(j-1)*20,R()<.5?1:-1);z.state='chase';z.sus=1;z.wasCalm=false;z.lastSeen=0;z.tx=player.x;z.tf=player.f;z.act={k:'emerge',t:0,dur:.9};z.inv=.9}
+    aTip('szczur3','Ze skrzyni wyskoczyły szczury.',2600)}}catch(e){}}})(finishSearch);
+const _rAct=ANI.szczur.act;ANI.szczur.act=function(z,dt){const a=z.act;if(a.k==='emerge'){a.t+=dt;z.moving=false;aAct(z);if(a.t>=a.dur)z.act=null;return}_rAct(z,dt)};
+
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
 function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];PROJ=[];CLOUD=[];SZP.length=0;SZB.length=0;SZPUD.length=0;G.mzWarned=false;G.szWarned=false;G.szHit=false;
@@ -3418,7 +3671,7 @@ function launchRaid(){G.muffWarned=false;MUP=[];MUB=[];PROJ=[];CLOUD=[];SZP.leng
   const st=G.locState[r.loc.id]||(G.locState[r.loc.id]={conts:null,killed:0});
   if(st.conts)containers.forEach((c,i)=>{const s=st.conts[i];if(s){c.searched=true;c.grid=s}});
   let list=zs.slice();const remove=Math.floor(Math.min(st.killed*.7,list.length*.6));for(let i=0;i<remove;i++)list.splice((R()*list.length)|0,1);
-  zombies=list.map(([x,f,fc])=>newZombie(x,f,fc));
+  zombies=list.map(([x,f,fc])=>newZombie(x,f,fc));spawnAnimals();
   player=newPlayer(r.raider,r.bag);player.x=LVX.startX;player.face=LVX.exitL?1:-1;ensureMerch();if(G.merch.poi===r.loc.id)spawnMerchant();
   clock=(G.baseClock||480)+r.loc.travel;kills=0;stats={searched:0};spawnT=0;nightWarned=false;camX=clamp(player.x-viewW/2,0,Math.max(0,WORLD_W-viewW));tipI=0;nextTip();
   $('toasts').innerHTML='';flashT=0;bannerT=0;$('banner').classList.remove('on');
