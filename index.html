@@ -1666,7 +1666,7 @@ function useBandage(){
 }
 function interactTargets(){
   const p=player,o=[];
-  if(G.inBase){for(const sp of baseSpots)if((sp.f||0)===p.f&&Math.abs(sp.x-p.x)<55)o.push({x:sp.x,label:sp.label,act:sp.act,pri:sp.pri});
+  if(G.inBase){for(const sp of baseSpots)if((sp.f||0)===p.f&&Math.abs(sp.x-p.x)<55&&(!sp.cond||sp.cond()))o.push({x:sp.x,label:typeof sp.label==='function'?sp.label():sp.label,act:sp.act,pri:sp.pri});
     if(comp&&comp.f===p.f&&Math.abs(comp.x-p.x)<55)o.push({x:comp.x,label:'Przejmij: '+comp.ch.first,act:switchChar})}
   
   const rb=roofB(p.f);
@@ -3117,9 +3117,109 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.10.6';
+const GAME_VER='0.11.0';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
+
+/* ================= OSŁONY / ZASIEKI PRZED KRYJÓWKĄ ================= */
+/* robi się je w warsztacie (przedmiot w magazynie), stawia na podwórku przed wejściem.
+   zombie nie przejdą - muszą je rozwalić. postacie gracza przechodzą bokiem. */
+const DEF={
+  osl_deski:{n:'Barykada z desek',hp:300,w:150,h:118,d:'Ściana z desek na kołkach. Tania, zatrzyma kilku truposzy.',need:{deski:4,gwozdzie:12},fix:{deski:1},thorn:0,col:'#6b4a2e'},
+  osl_kolce:{n:'Zasieki z kolcami',hp:240,w:160,h:104,d:'Zaostrzone pale i drut. Kto je szarpie, ten się rani.',need:{deski:3,gwozdzie:6,copper_wire:1},fix:{deski:1},thorn:1.2,col:'#5c4330'},
+  osl_blacha:{n:'Barykada z blachy',hp:520,w:154,h:128,d:'Blachy na stalowej ramie. Najtrwalsza.',need:{zlom:4,czesci:1,deski:2},fix:{zlom:1},thorn:0,col:'#6f7270'}};
+for(const[id,o]of Object.entries(DEF))ID[id]={n:o.n,w:2,h:2,c:'Materiały',d:o.d+' Postaw na podwórku przed kryjówką (wytrzymałość '+o.hp+').',stack:2};
+if(RECIPES.warsztat){const L=RECIPES.warsztat.list;
+  for(const[id,o]of Object.entries(DEF))L.push({n:o.n,d:o.d+' Postaw przed kryjówką.',need:o.need,out:[id,1]})}
+let BAR=[];
+function defSpotsDef(d){const out=[];
+  for(const e of d.entrances){const ex=BL.X(e.x),s=e.side==='left'?-1:1;
+    for(const[k,dx]of[[1,165],[2,320]]){const x=clamp(ex+s*dx,90,WORLD_W-90);out.push({id:e.side+k,x})}}
+  return out}
+function defState(){const st=bState();st.def=st.def||{};return st.def}
+function defDraw(c,t,x,y,k,ph){/* x = środek, y = ziemia, k = stan 0..1 */
+  const o=DEF[t],W=o.w,H=o.h;c.save();c.translate(x,y);c.lineJoin='round';c.lineCap='round';
+  const ink='#1d1712',miss=v=>k<v;
+  const plank=(x0,y0,x1,y1,w,col,i)=>{c.save();c.strokeStyle=ink;c.lineWidth=w+3;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();
+    c.strokeStyle=col;c.lineWidth=w;c.stroke();c.strokeStyle='rgba(255,230,190,.18)';c.lineWidth=1.2;c.beginPath();c.moveTo(x0,y0-w*.25);c.lineTo(x1,y1-w*.25);c.stroke();c.restore()};
+  /* cień */
+  c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(0,2,W*.55,7,0,0,7);c.fill();
+  if(t==='osl_deski'){
+    for(const[i,px]of[-.42,-.14,.14,.42].entries())plank(W*px,4,W*px+(i%2?3:-3),-H*1.02,9,'#4f3826');
+    const rows=[-.18,-.42,-.66,-.88];rows.forEach((ry,i)=>{if(miss(.25*(i+1)-.2)&&i>0)return;const tilt=(i%2?1:-1)*5;plank(-W*.56,H*ry+tilt,W*.56,H*ry-tilt,15,i%2?'#7a5636':'#6b4a2e')});
+    c.fillStyle='#b9b2a6';for(const ry of rows)for(const px of[-.42,-.14,.14,.42])c.fillRect(W*px-1,H*ry-1,2,2);
+    plank(-W*.5,-H*.12,W*.45,-H*.8,8,'#5d4128');
+  }else if(t==='osl_kolce'){
+    plank(-W*.5,0,W*.5,0,10,'#4a3524');
+    const st=[-.42,-.21,0,.21,.42];st.forEach((px,i)=>{if(miss(.18*i)&&i%2)return;const a=(i%2?1:-1)*.38;
+      const bx=W*px,tx=bx+Math.sin(a)*H*1.05,ty=-Math.cos(a)*H*1.05;plank(bx,2,tx,ty,9,'#6a4b31');
+      c.fillStyle='#c9b48e';c.beginPath();c.moveTo(tx-4,ty+8);c.lineTo(tx+Math.sin(a)*12,ty-Math.cos(a)*12);c.lineTo(tx+4,ty+8);c.fill()});
+    c.strokeStyle='#8d8f8c';c.lineWidth=1.4;for(let r=0;r<3;r++){c.beginPath();for(let i=0;i<=24;i++){const xx=-W*.5+W*i/24,yy=-H*(.25+r*.22)+Math.sin(i*1.7+r+ph*.3)*3;i?c.lineTo(xx,yy):c.moveTo(xx,yy)}c.stroke();
+      for(let i=1;i<24;i+=3){const xx=-W*.5+W*i/24,yy=-H*(.25+r*.22)+Math.sin(i*1.7+r)*3;c.beginPath();c.moveTo(xx-3,yy-3);c.lineTo(xx+3,yy+3);c.moveTo(xx+3,yy-3);c.lineTo(xx-3,yy+3);c.stroke()}}
+  }else{
+    c.strokeStyle=ink;c.lineWidth=3;
+    const sheets=[[-.5,-.17,.98],[-.18,.16,1.02],[.15,.5,.95]];sheets.forEach(([a,b,hh],i)=>{if(miss(.3*i-.05)&&i===1)return;
+      const x0=W*a,x1=W*b,y1=-H*hh;const g=c.createLinearGradient(x0,0,x1,0);for(let j=0;j<=6;j++)g.addColorStop(j/6,j%2?'#5d605e':'#80837f');
+      c.fillStyle=g;c.beginPath();c.moveTo(x0,2);c.lineTo(x1,2);c.lineTo(x1,y1+(i-1)*4);c.lineTo(x0,y1-(i-1)*3);c.closePath();c.fill();c.stroke();
+      c.fillStyle='rgba(120,62,30,.45)';c.fillRect(x0+4,y1*.35,(x1-x0)*.4,8);c.fillRect(x0+(x1-x0)*.5,y1*.8,(x1-x0)*.3,6)});
+    plank(-W*.52,-H*.3,W*.52,-H*.3,7,'#3d3f3e');plank(-W*.52,-H*.72,W*.52,-H*.72,7,'#3d3f3e');
+  }
+  if(k<.55){c.strokeStyle='rgba(20,14,10,.75)';c.lineWidth=2;for(let i=0;i<5;i++){const xx=(i/4-.5)*W*.8,yy=-H*(.3+(i%3)*.2);c.beginPath();c.moveTo(xx,yy);c.lineTo(xx+9,yy+13);c.lineTo(xx+3,yy+22);c.stroke()}}
+  c.restore()}
+/* ikonki w plecaku/warsztacie */
+drawIcon=(function(_d){return function(c,id,W,Hh){if(!DEF[id])return _d(c,id,W,Hh);const o=DEF[id],s=Math.min(W/o.w,Hh/o.h)*.82;c.save();c.translate(W/2,Hh*.9);c.scale(s,s);defDraw(c,id,0,0,1,0);c.restore()}})(drawIcon);
+/* budowa poziomu bazy: odtwórz postawione osłony i dodaj miejsca */
+buildBaseL=(function(_b){return function(){const r=_b();BAR=[];const d=BL.b.def,ds=defState(),spots=defSpotsDef(d);
+  for(const sp of spots){const cur=ds[sp.id];
+    if(cur&&DEF[cur.t]){const bar={id:sp.id,t:cur.t,x:sp.x,f:0,hp:cur.hp,max:DEF[cur.t].hp,shake:0};BAR.push(bar);
+      baseSpots.push({x:sp.x,f:0,label:()=>DEF[bar.t].n+' '+Math.ceil(100*bar.hp/bar.max)+'%: napraw',act:()=>defFix(bar)});
+      baseSpots.push({x:sp.x,f:0,pri:3,label:'Zabierz: '+DEF[cur.t].n,act:()=>defTake(bar)})}
+    else baseSpots.push({x:sp.x,f:0,label:'Postaw osłonę przeciw zombie',act:()=>openDefBuild(sp),cond:()=>Object.keys(DEF).some(id=>gCount(G.storage,id)>0)})}
+  return r}})(buildBaseL);
+function defSave(bar){const ds=defState();if(bar.hp<=0)delete ds[bar.id];else ds[bar.id]={t:bar.t,hp:Math.round(bar.hp)}}
+function defFix(bar){if(bar.hp>=bar.max)return toast('Osłona jest cała');const need=DEF[bar.t].fix;
+  for(const[k,n]of Object.entries(need))if(gCount(G.storage,k)<n)return toast('Do naprawy potrzeba: '+Object.entries(need).map(([k,n])=>ID[k].n+' ×'+n).join(', '));
+  for(const[k,n]of Object.entries(need))gTake(G.storage,k,n);bar.hp=Math.min(bar.max,bar.hp+bar.max*.35);defSave(bar);sfx('hit',bar.x);
+  if(typeof gainXP==='function')gainXP(player.ch,3,'naprawa');
+  toast(DEF[bar.t].n+': '+Math.ceil(100*bar.hp/bar.max)+'%')}
+function defTake(bar){const ds=defState();if(bar.hp>=bar.max*.6){addItems(G.storage,bar.t,1,true);toast('Zabrano do magazynu: '+DEF[bar.t].n)}
+  else{const back=Object.entries(DEF[bar.t].need).map(([k,n])=>[k,Math.floor(n/3)]).filter(a=>a[1]>0);for(const[k,n]of back)addItems(G.storage,k,n,true);toast('Osłona była zniszczona. Odzyskano trochę materiałów.')}
+  delete ds[bar.id];rebuildBase()}
+function openDefBuild(sp){syncChar();craftSt='def';mode='craft';hold.left=hold.right=hold.run=false;show('craft');
+  $('crEyebrow').textContent='Kryjówka · podwórko';$('crTitle').textContent='Osłona przeciw zombie';$('crLead').textContent='Wybierz osłonę z magazynu. Zombie muszą ją rozwalić, żeby przejść. Ty i towarzysze przejdziecie bokiem.';
+  const ids=Object.keys(DEF).filter(id=>gCount(G.storage,id)>0);
+  $('crList').innerHTML=ids.length?ids.map(id=>`<div class="rc"><div class="ri"><img src="${iconURL(id,0)}" alt=""></div><div style="min-width:0"><b>${DEF[id].n}</b><p>${DEF[id].d} Wytrzymałość ${DEF[id].hp}${DEF[id].thorn?', rani atakujących':''}. W magazynie: ${gCount(G.storage,id)}.</p><button class="btn sm" data-d="${id}">Postaw</button></div></div>`).join('')
+    :'<p class="lead">Nie masz żadnej osłony. Zrób ją w warsztacie.</p>';
+  for(const b of $('crList').querySelectorAll('[data-d]'))b.onclick=()=>{const id=b.dataset.d;if(!gTake(G.storage,id,1))return;defState()[sp.id]={t:id,hp:DEF[id].hp};
+    sfx('pick');toast('Postawiono: <b>'+DEF[id].n+'</b>',1800);mode='play';show(null);rebuildBase()}}
+/* rysowanie - za postaciami, na tle podwórka */
+drawBaseImg=(function(_d){return function(b){const c=ctx;
+  for(const bar of BAR){if(bar.hp<=0)continue;const sx=bar.shake>0?Math.sin(bar.shake*60)*bar.shake*14:0;defDraw(c,bar.t,bar.x+sx,F[bar.f]+6,bar.hp/bar.max,clock)}
+  _d(b)}})(drawBaseImg);
+/* zombie zatrzymują się na osłonie i ją niszczą */
+moveEnt=(function(_m){return function(e,dx){const x0=e.x,hit=_m(e,dx);
+  if(!G.inBase||!BAR.length||!e.limp||e.dead)return hit;
+  for(const bar of BAR){if(bar.hp<=0||bar.f!==e.f)continue;const hw=DEF[bar.t].w*.42;
+    if(x0<=bar.x-hw&&e.x>bar.x-hw-1){e.x=bar.x-hw-1;e.barHit=bar;return bar}
+    if(x0>=bar.x+hw&&e.x<bar.x+hw+1){e.x=bar.x+hw+1;e.barHit=bar;return bar}}
+  return hit}})(moveEnt);
+updZombie=(function(_u){return function(z,dt){
+  if(z.barHit&&!z.dead&&z.state!=='attack'&&z.state!=='killed'&&z.barHit.hp>0&&!z.stair){z.onBar=z.barHit;z.state='attack';z.atk=0;z.hitDone=false;z.barDone=false;z.face=Math.sign(z.onBar.x-z.x)||z.face;z.moving=false}
+  z.barHit=null;_u(z,dt);
+  const bar=z.onBar;if(!bar)return;
+  if(z.dead||z.state!=='attack'||bar.hp<=0){z.onBar=null;return}
+  z.face=Math.sign(bar.x-z.x)||z.face;
+  if(z.atk>.55&&!z.barDone){z.barDone=true;const T=ZT[z.type]||{},dmg=(phase()>.6?10:8)*(T.hp>2?1.5:1);bar.hp-=dmg;bar.shake=.25;
+    sfx('door',bar.x);
+    if(DEF[bar.t].thorn){z.hp-=DEF[bar.t].thorn;for(let i=0;i<4;i++)blood(z.x,z.y-90,z.f,Math.sign(z.x-bar.x));if(z.hp<=0)killZombie(z,Math.sign(z.x-bar.x)||1)}
+    if(bar.hp<=0){bar.hp=0;defSave(bar);shake=Math.max(shake,8);toast('Zombie rozwaliły osłonę: '+DEF[bar.t].n+'!',2400);emitNoise(bar.x,bar.f,500,'door');
+      BAR=BAR.filter(q=>q!==bar);baseSpots=baseSpots.filter(s=>Math.abs(s.x-bar.x)>2||s.f!==bar.f)}
+    else defSave(bar)}
+  }})(updZombie);
+(function(){let last=performance.now();setInterval(()=>{const now=performance.now(),dt=Math.min(.1,(now-last)/1000);last=now;for(const b of BAR)if(b.shake>0)b.shake=Math.max(0,b.shake-dt)},33)})();
+/* test / przyszłe fale: bazaFala(liczba, 'left'|'right') */
+function bazaFala(n,side){if(!G.inBase)return;const W=WORLD_W;for(let i=0;i<(n||4);i++){const s=side||(R()<.5?'left':'right'),x=s==='left'?60+R()*40:W-60-R()*40;
+  const z=newZombie(x,0,s==='left'?1:-1);z.sus=1;z.tx=player.x;z.tf=0;toChase(z);zombies.push(z)}}
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
