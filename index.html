@@ -2287,7 +2287,7 @@ function buildBaseL(){
     else{climbs.push({kind:'ladder',x0:X(a.x),f0:fi(a.y),x1:X(c.x),f1:fi(c.y),up:L.type==='hatch_ladder'?'Wyjdź przez właz':'Wejdź po drabinie',down:'Zejdź po drabinie',noise:0,inside:b});P('inladder',X(a.x),fi(a.y),{top:F[fi(c.y)]+10})}}
   for(const r of d.rooms){if(r.kind==='stairwell'||r.kind==='outdoor')continue;const f=fi(r.floorY);const l={x:X((r.x0+r.x1)/2),y:F[f]-235,r:Math.max(280,(r.x1-r.x0)*AS*.62),i:.62,b,f,flick:r.kind==='basement'?1:0};lamps.push(l)}
   baseSpots=[];
-  for(const s of d.slots){const f=fi(s.floorY),cx=X((s.x0+s.x1)/2),oid=st.objs[s.id];
+  for(const s of d.slots){if((BNOSLOT[d.id]||[]).includes(s.id))continue;const f=fi(s.floorY),cx=X((s.x0+s.x1)/2),oid=st.objs[s.id];
     if(oid&&BOBJ[oid]){P('bp',cx,f,{id:oid,slot:s,flip:s.x0>d.width/2});baseSpots.push(...objSpots(oid,s,cx,f))}
     else P('bslot',cx,f,{slot:s,w:(s.x1-s.x0)*AS*.86});
     if(!oid)baseSpots.push({x:cx,f,label:'Zbuduj tutaj ('+(s.size==='L'?'duże':'małe')+' miejsce)',act:()=>openBuild(s)})}
@@ -2323,14 +2323,7 @@ function renderBuild(){const s=craftSlot;
   for(const b of $('crList').querySelectorAll('[data-b]'))b.onclick=()=>{const id=b.dataset.b,o=BOBJ[id];for(const[k,n]of Object.entries(o.cost))gTake(G.storage,k,n);
     bState().objs[s.id]=id;sfx('pick');gainXP(player&&player.ch,10);toast('Zbudowano: <b>'+bName(id)+'</b>',1800);mode='play';show(null);rebuildBase()};
 }
-function drawBaseImg(b){const c=ctx;dImg(AI('bases/'+b.def.id),b.ox,b.imgTop,b.imgW,b.imgH);
-  /* otwory w podłodze nad schodami (tymczasowo malowane, do czasu nowej grafiki) */
-  const H=typeof BHOLE!=='undefined'&&BHOLE[b.def.id];if(!H)return;
-  for(const k in H){const fy=+k,[h0,h1]=H[k],x0=b.ox+h0*AS,x1=b.ox+h1*AS,y0=b.imgTop+(fy-30)*AS,y1=b.imgTop+(fy+118)*AS;
-    const g=c.createLinearGradient(0,y0,0,y1);g.addColorStop(0,'#0d0b09');g.addColorStop(.25,'#16130f');g.addColorStop(1,'#060504');
-    c.fillStyle=g;c.fillRect(x0,y0,x1-x0,y1-y0);
-    c.fillStyle='#4a3b2a';c.fillRect(x0,y0,x1-x0,2.5);c.fillStyle='#2a2119';c.fillRect(x0-3,y0,3,y1-y0);c.fillRect(x1,y0,3,y1-y0);
-    c.fillStyle='rgba(0,0,0,.45)';c.fillRect(x0,y0+2.5,x1-x0,5)}}
+function drawBaseImg(b){const c=ctx;dImg(AI('bases/'+b.def.id),b.ox,b.imgTop,b.imgW,b.imgH);}
 
 /* ---------- przedmioty z grafik, jedzenie, picie, psucie ---------- */
 var ICON_AT={};
@@ -2582,9 +2575,11 @@ function drawBaseFront(b){const img=AI('bases/'+b.def.id);if(!okI(img))return;co
 
 /* ================= SCHODY ŁAMANE I ŻYCIE TOWARZYSZA W KRYJÓWCE ================= */
 /* schody po trasie z punktów (dół → spocznik → góra), w pikselach grafiki bazy */
-const BSTAIR={kostka:{0:[[1530,2691],[2085,2266],[1740,1949]],1:[[1385,1949],[1975,1455],[2045,1455],[2120,1186],[2150,1186]]}};
+const BSTAIR={kostka:{0:[[1300,2691],[2040,1949]],1:[[1385,1949],[2170,1186]]}};
 /* otwory w stropach (x od–do w pikselach grafiki bazy) tam gdzie przechodzą schody */
-const BHOLE={kostka:{1949:[1705,1975],1186:[1995,2240]}};
+/* miejsca na budowę zajęte przez schody lub otwory w stropie */
+const BNOSLOT={kostka:['pietro_l_3','piwnica_l_2']};
+const BHOLE={kostka:{1949:[1750,2050],1186:[1756,2137]}};
 function startStair(e,st,up){
   if(st.path){const pts=up?st.path:st.path.slice().reverse();const seg=[];let L=0;
     for(let i=1;i<pts.length;i++){const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(l);L+=l}
@@ -3117,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.11.0';
+const GAME_VER='0.11.1';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
