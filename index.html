@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.14.4';
+const GAME_VER='0.14.5';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3429,7 +3429,8 @@ function drawSideWin(wn,b,y0,h){let kind=(b&&(b.win==='window_boarded'||b.win===
   const ih=h*1.12,iw=ih*67/200,yb=y0+h+ih*.05;
   if(wn.open){ctx.drawImage(img,wn.x+10-iw,yb-ih,iw,ih);return}
   /* zamknięte: lustrzane odbicie, ściana okna od strony budynku (po prawej) */
-  ctx.save();ctx.translate(wn.x+8,yb-ih);ctx.scale(-1,1);ctx.drawImage(img,0,0,iw,ih);ctx.restore()}
+  /* wmontowane w grubość ściany (24 px), nie przed nią */
+  ctx.save();ctx.translate(wn.x+13,yb-ih);ctx.scale(-1,1);ctx.drawImage(img,0,0,26,ih);ctx.restore()}
 /* barierka schodów przed postacią: ponownie rysuje grafikę schodów, przyciętą do pasa nad linią stopni */
 function drawKitStairRail(b){const st=b.stair;if(!st||!st.D)return;const D=st.D,s=st.s,c=ctx,p=D.p;
   const wx=ax=>st.flip?st.sl+(D.W-ax)*s:st.sl+ax*s,wy=ay=>F[0]+SOFF-(D.H-ay)*s;
