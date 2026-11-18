@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.15.4';
+const GAME_VER='0.15.5';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3602,7 +3602,7 @@ ANI.kruk={high:z=>z.rv&&z.rv.s!=='perch'&&z.jy<-34,
     if(v.s==='take'){z.moving=false;z.an={n:'takeoff',i:Math.min(7,Math.floor(v.t/.9*8))};z.x=clamp(z.x+z.face*dt*45,50,WORLD_W-50);z.jy=0;
       if(!v.w){v.w=1;asnd(z,'skrzydla',.8)}if(v.t>=.9){v.s='fly';v.t=0;v.alt=44;v.dt=1.8+R()*1.2;v.side=R()<.5?1:-1}return true}
     z.moving=true;
-    if(v.s==='fly'){const tx=p.x+v.side*230;const dx=tx-z.x,vx=clamp(dx*2.2,-200,200);z.x=clamp(z.x+vx*dt,50,WORLD_W-50);if(Math.abs(vx)>20)z.face=Math.sign(vx);
+    if(v.s==='fly'){const tx=p.x+v.side*250;let dx=tx-z.x;if(Math.abs(dx)<26){v.side=-v.side;dx=p.x+v.side*250-z.x}const vx=Math.sign(dx)*Math.min(200,110+Math.abs(dx)*.9);z.x=clamp(z.x+vx*dt,50,WORLD_W-50);z.face=Math.sign(vx)||z.face;
       const ta=112+Math.sin(time*2.3+z.ph)*14;v.alt=lerp(v.alt,ta,Math.min(1,dt*2));z.jy=-v.alt;aLoop(z,'fly',12);v.wc=(v.wc||0)-dt;if(v.wc<=0){v.wc=1.4;asnd(z,'skrzydla',.45)}
       if(v.t>v.dt&&aSame(z,p)&&dist<330){v.s='dive';v.t=0;v.x0=z.x;v.tx=p.x+(p.moving?p.face*34:0);v.a0=v.alt;z.face=Math.sign(v.tx-z.x)||z.face;asnd(z,'nurkowanie',.8)}
       return true}
