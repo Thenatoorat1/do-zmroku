@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.15.1';
+const GAME_VER='0.15.2';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3432,7 +3432,7 @@ function drawSideWin(wn,b,y0,h){let kind=(b&&(b.win==='window_boarded'||b.win===
   /* wmontowane w grubość ściany (24 px), nie przed nią */
   ctx.save();ctx.translate(wn.x+13,yb-ih);ctx.scale(-1,1);ctx.drawImage(img,0,0,26,ih);ctx.restore()}
 /* barierka schodów przed postacią: ponownie rysuje grafikę schodów, przyciętą do pasa nad linią stopni */
-function drawKitStairRail(b){const st=b.stair;if(!st||!st.D)return;const D=st.D,s=st.s,c=ctx,p=D.p;
+function drawKitStairRail(b){const st=b.stair;if(!st||!st.D)return;if(!(b.revealed||(player&&player.peek&&player.peek.b===b)))return;const D=st.D,s=st.s,c=ctx,p=D.p;
   const wx=ax=>st.flip?st.sl+(D.W-ax)*s:st.sl+ax*s,wy=ay=>F[0]+SOFF-(D.H-ay)*s;
   c.save();c.beginPath();let any=false;
   for(let i=0;i<p.length-1;i++){const a=p[i],e=p[i+1];if(Math.abs(e[1]-a[1])<20)continue;any=true;
@@ -3880,10 +3880,10 @@ function fxDrawObj(o){const c=ctx,gy=F[o.f]+6;
     const shk=o.st==='burning'&&o.fuse!=null&&o.fuse<4?Math.sin(time*60)*1.4:0;
     c.save();c.translate(o.x+shk,gy+2);if(o.flip)c.scale(-1,1);c.drawImage(img,-m.w*VSC/2,-m.h*VSC,m.w*VSC,m.h*VSC);c.restore();return}
   if(o.k==='bar'){const gy2=F[o.f]+6;
-    if(o.st==='remains'||(o.st==='boom'&&o.t>.15)){const img=fxImg('barrel_remains');if(okI(img))c.drawImage(img,o.x-img.naturalWidth/2,gy2-img.naturalHeight+3)}
-    else if(o.v==='fb'){const fr=o.fire;if(fr&&fr.state==='embers'||(fr&&fr.state==='die'&&fr.t>.5)){const img=fxImg('barrel_remains');if(okI(img))c.drawImage(img,o.x-img.naturalWidth/2,gy2-img.naturalHeight+3)}else fxDraw('barrel_fire',fr&&fr.state==='die'?'die':'loop',fr?fr.t+fr.ph:time,o.x,gy2)}
-    else if(o.v==='ex')fxDraw('barrel_explosive',o.st==='hit'?'hit':o.st==='burn'?'burn':'idle',o.st==='idle'?o.t:o.t,o.x,gy2);
-    else if(o.v==='tox')fxDraw('barrel_toxic',o.st==='leak'?'leak':'idle',o.t,o.x,gy2);return}
+    if(o.st==='remains'||(o.st==='boom'&&o.t>.15)){const img=fxImg('barrel_remains');if(okI(img)){const W=img.naturalWidth*.8,H=img.naturalHeight*.8;c.drawImage(img,o.x-W/2,gy2-H+3,W,H)}}
+    else if(o.v==='fb'){const fr=o.fire;if(fr&&fr.state==='embers'||(fr&&fr.state==='die'&&fr.t>.5)){const img=fxImg('barrel_remains');if(okI(img)){const W=img.naturalWidth*.8,H=img.naturalHeight*.8;c.drawImage(img,o.x-W/2,gy2-H+3,W,H)}}else fxDraw('barrel_fire',fr&&fr.state==='die'?'die':'loop',fr?fr.t+fr.ph:time,o.x,gy2,{s:.8})}
+    else if(o.v==='ex')fxDraw('barrel_explosive',o.st==='hit'?'hit':o.st==='burn'?'burn':'idle',o.t,o.x,gy2,{s:.8});
+    else if(o.v==='tox')fxDraw('barrel_toxic',o.st==='leak'?'leak':'idle',o.t,o.x,gy2,{s:.8});return}
   if(o.k==='pool'){const gr=Math.min(1,o.t/.67);if(o.t<.67)fxDraw('toxic_pool','grow',o.t,o.x,gy,{a:.95});else fxDraw('toxic_pool','loop',o.t-.67,o.x,gy,{a:.95});return}
   if(o.k==='scorch'){const img=fxImg('scorch_decal');if(okI(img)){const W=o.w,H=W*img.naturalHeight/img.naturalWidth;c.save();c.globalAlpha=.8;c.drawImage(img,o.x-W/2,gy-H*.62,W,H);c.restore()}return}}
 function fxDrawFire(fr){const c=ctx,gy=F[fr.f]+4,st=fr.state,d=BLD[fr.sz],t=fr.t;
@@ -3913,7 +3913,7 @@ function fxDrawWorld(){const c=ctx,vx0=camX-400,vx1=camX+viewW+400;
     else if(o.k==='bar'&&o.v==='tox'&&o.st==='leak')fxDraw('toxic_cloud','loop',o.t,o.x,gy-60,{a:.35,s:.55});
     else if(o.k==='spo'){const row=o.st==='fade'?'fade':o.st==='burst'?'burst':'idle';fxDraw('spores_cloud',row,o.st==='idle'?time+o.t:o.t,o.x,gy+10,{a:.78,s:1.1})}
     else if(o.k==='fly')fxDraw('fly_swarm','loop',time*.9+o.ph,o.x,gy-52,{s:.55,a:.9});
-    else if(o.k==='bar'&&o.st==='boom')fxMask('barrel_boom','boom',o.t,o.x,gy+2,.7);
+    else if(o.k==='bar'&&o.st==='boom')fxMask('barrel_boom','boom',o.t,o.x,gy+2,.6);
     else if(o.k==='veh'&&o.st==='boom'){const sc=o.v==='bus'?.8:o.v==='van'?.58:.5;fxMask('vehicle_explosion_fx','boom',o.t*.9,o.x,gy+8,sc)}}
   for(const z of zombies)if(z.dead&&z.x>vx0&&z.x<vx1&&z.fxD>4&&((z.ph*7)|0)%3===0)fxDraw('fly_swarm','loop',time*.9+z.ph,z.x,F[z.f]-6,{s:.5,a:.8});
   for(const fr of FIRES){if(fr.x<vx0||fr.x>vx1||!layerVis(fr))continue;fxDrawFire(fr)}
@@ -3981,6 +3981,11 @@ useExt=(function(_f){return function(w){const p=player,d0=p.weapon?p.weapon.dur:
   const n=fxDouse(p.x+p.face*120,p.f,130,95,p.face);if(n){aTip('foam','Piana dusi ogień. Kilka strzałów gasi duży pożar.',2800)}}}})(useExt);
 canSee=(function(_f){return function(z){let v=_f(z);if(v&&WX.t==='fog'&&player){const d=Math.abs(player.x-z.x),lim=620-300*WX.k;if(d>lim)return 0;if(d>lim*.6)v*=.6}return v}})(canSee);
 emitNoise=(function(_f){return function(x,f,r,kind){if(WX.t==='rain'||WX.t==='storm'){if(kind!=='distract'&&r<700)r*=1-.2*WX.k}if(WX.thunder>0&&kind!=='distract'&&r<700)r*=.65;return _f(x,f,r,kind)}})(emitNoise);
+/* budynki widziane od frontu stoją głębiej na scenie: mniejsze i uniesione, z pasem chodnika przed nimi */
+const BGS=.74,BGDY=66;
+function bgXf(b,fn){const c=ctx,px=b.fx!=null?b.fx:(b.x0+b.x1)/2,py=F[0]+17+FDY;c.save();c.translate(px,py-BGDY);c.scale(BGS,BGS);c.translate(-px,-py);try{fn()}finally{c.restore()}}
+drawKitFacade=(function(_f){return function(b){if(b.bg&&!b.revealed)bgXf(b,()=>_f(b));else _f(b)}})(drawKitFacade);
+drawKitRoof=(function(_f){return function(b){if(b.bg&&!b.revealed)bgXf(b,()=>_f(b));else _f(b)}})(drawKitRoof);
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
