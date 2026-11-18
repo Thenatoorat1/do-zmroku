@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.15.6';
+const GAME_VER='0.15.7';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3413,7 +3413,7 @@ const IMG_DT=loadImg('a/parts/drain_top.webp'),IMG_DM=loadImg('a/parts/drain_mid
 const DRS=.28;
 /* rura spustowa z boku: lejek u góry (od strony budynku), powtarzalny środek, kolanko u dołu. Budynek jest po prawej */
 function drawDrain(p,y){if(!(okI(IMG_DT)&&okI(IMG_DM)&&okI(IMG_DB)))return false;
-  const c=ctx,cx=p.x,s=DRS,yTop=p.top-4,yG=y+4,topH=330*s,botH=320*s;
+  const c=ctx,cx=p.x,s=DRS,yTop=p.top-44,yG=y+4,topH=330*s,botH=320*s;
   const mTop=yTop+topH-1,mBot=yG-botH+1;
   c.save();
   if(mBot>mTop){const th=256*s;c.beginPath();c.rect(cx-60,mTop,120,mBot-mTop);c.clip();
@@ -3430,7 +3430,7 @@ function drawSideWin(wn,b,y0,h){let kind=(b&&(b.win==='window_boarded'||b.win===
   if(wn.open){ctx.drawImage(img,wn.x+10-iw,yb-ih,iw,ih);return}
   /* zamknięte: lustrzane odbicie, ściana okna od strony budynku (po prawej) */
   /* wmontowane w grubość ściany (24 px), nie przed nią */
-  ctx.save();ctx.translate(wn.x+13,yb-ih);ctx.scale(-1,1);ctx.drawImage(img,0,0,26,ih);ctx.restore()}
+  ctx.save();ctx.translate(wn.x+17,yb-ih);ctx.scale(-1,1);ctx.drawImage(img,0,0,21,ih);ctx.restore()}
 /* barierka schodów przed postacią: ponownie rysuje grafikę schodów, przyciętą do pasa nad linią stopni */
 function drawKitStairRail(b){const st=b.stair;if(!st||!st.D)return;if(!(b.revealed||(player&&player.peek&&player.peek.b===b)))return;const D=st.D,s=st.s,c=ctx,p=D.p;
   const wx=ax=>st.flip?st.sl+(D.W-ax)*s:st.sl+ax*s,wy=ay=>F[0]+SOFF-(D.H-ay)*s;
