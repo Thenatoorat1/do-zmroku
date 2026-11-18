@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.15.5';
+const GAME_VER='0.15.6';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3916,7 +3916,7 @@ function fxDrawWorld(){const c=ctx,vx0=camX-400,vx1=camX+viewW+400;
     else if(o.k==='bar'&&o.st==='boom')fxMask('barrel_boom','boom',o.t,o.x,gy+2,.5);
     else if(o.k==='veh'&&o.st==='boom'){const sc=o.v==='bus'?.8:o.v==='van'?.58:.5;fxMask('vehicle_explosion_fx','boom',o.t*.9,o.x,gy+8,sc)}}
   for(const z of zombies)if(z.dead&&z.x>vx0&&z.x<vx1&&z.fxD>4&&((z.ph*7)|0)%3===0)fxDraw('fly_swarm','loop',time*.9+z.ph,z.x,F[z.f]-6,{s:.5,a:.8});
-  for(const fr of FIRES){if(fr.x<vx0||fr.x>vx1||!layerVis(fr))continue;fxDrawFire(fr)}
+  for(const fr of FIRES){if(fr.x<vx0||fr.x>vx1||fr.sz==='vb'||!layerVis(fr))continue;fxDrawFire(fr)}
   for(const z of zombies){if(z.dead||!(z.burnT>0)||z.x<vx0||z.x>vx1||!layerVis(z))continue;fxBurnBody(z.x,z.y+(z.jy||0),(ZT[z.type]||{}).H||175,z.bAge||0,z.ph*7,z.burnT)}
   const p=player;if(p&&p.burnT>0&&!p.dead)fxBurnBody(p.x,p.y,175,p.bAge||0,3.3,p.burnT);
   for(const m of MOL){const img=fxImg('molotov_fly');if(!okI(img))continue;c.save();c.translate(m.x,m.y);c.rotate(m.rot);c.drawImage(img,0,0,72,72,-30,-30,60,60);c.restore()}
@@ -3960,7 +3960,7 @@ function fxDrawWeather(){const p=player;if(!p||mode!=='play'||!LV||!WX.t||G.inBa
   c.restore()}
 /* ---------- podpięcia do silnika ---------- */
 inView=(function(_f){return function(p){if(p.t==='fxo'&&p.o&&p.o.w)return p.o.x>camX-p.o.w/2-60&&p.o.x<camX+viewW+p.o.w/2+60;return _f(p)}})(inView);
-const _dp0=drawProp;drawProp=function(p){if(p.t==='fxo'){fxDrawObj(p.o);return}return _dp0(p)};
+const _dp0=drawProp;drawProp=function(p){if(p.t==='fxo'){fxDrawObj(p.o);const f=p.o.fire;if(p.o.k==='veh'&&f&&FIRES.includes(f)&&layerVis(f))fxDrawFire(f);return}return _dp0(p)};
 drawSpitFx=(function(_f){return function(){_f();try{fxDrawWorld()}catch(e){if(!fxDrawWorld.err){fxDrawWorld.err=1;console.error('fxDrawWorld',e)}}}})(drawSpitFx);
 drawForeground=(function(_f){return function(){_f();try{fxDrawWeather()}catch(e){if(!fxDrawWeather.err){fxDrawWeather.err=1;console.error('fxDrawWeather',e)}}}})(drawForeground);
 updSpitFx=(function(_f){return function(dt){_f(dt);try{fxUpdate(dt)}catch(e){if(!fxUpdate.err){fxUpdate.err=1;console.error('fxUpdate',e)}}}})(updSpitFx);
