@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.18.4';
+const GAME_VER='0.18.5';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4093,7 +4093,7 @@ drawZSprite=(function(_d){return function(z){if(!z.bloat)return _d(z);
   if(n[0]==='b'||n[0]==='s'){FCX.globalCompositeOperation='source-over';FCX.clearRect(0,0,256,256);FCX.drawImage(img,f[0],f[1],256,256,0,0,256,256);
     FCX.globalCompositeOperation='destination-in';const g=FCX.createLinearGradient(200,0,255,0);g.addColorStop(0,'#000');g.addColorStop(1,'rgba(0,0,0,0)');FCX.fillStyle=g;FCX.fillRect(0,0,256,256);src=FCV;sx=0;sy=0}
   /* arkusz chodu ma prawie nieruchome nogi, więc dokładamy kołysanie: podskok i przechył w rytmie kroku */
-  let bob=0,tilt=0;if(n[0]==='w'&&(z.moving||z.stair)){const th=(z.walkP||0)*1.5/8*Math.PI*2;bob=Math.abs(Math.sin(th))*5;tilt=Math.sin(th)*.045*(z.face||1)}
+  let bob=0,tilt=0;
   c.save();c.translate(z.x,z.y+(z.z||0)+2-bob);if(tilt)c.rotate(tilt);c.scale((z.face||1)*(flip?-1:1)*k,k);c.drawImage(src,sx,sy,256,256,-f[4],-f[5],256,256);c.restore()}})(drawZSprite);
 /* --- mechanika --- */
 function bloatStart(z){if(z.bl||z.dead)return;snd('smieciarz_nabrzmiewa',z.x,.9);z.bl={t:0};const p=player;if(p)z.face=Math.sign(p.x-z.x)||z.face;z.moving=false;z.state='chase';z.act=null}
