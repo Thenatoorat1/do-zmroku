@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.15.7';
+const GAME_VER='0.15.8';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3723,7 +3723,13 @@ function fxSnd(kind,x,vol=1){if(!ac)return;let v=vol;if(x!=null&&player)v*=clamp
   }}
 /* ---------- rysowanie klatek arkuszy ---------- */
 function fxFr(n,row,t){const r=FXM[n].rows[row],i=Math.floor(Math.max(0,t)*r.fps);return r.loop?i%8:Math.min(7,i)}
-function fxDraw(n,row,t,x,gy,o={}){const m=FXM[n],r=m.rows[row],img=fxImg(n);if(!okI(img))return false;
+const SC=document.createElement('canvas');SC.width=192;SC.height=288;const SX=SC.getContext('2d');
+/* dym: płynne przenikanie klatek (7 kl/s) + wygaszony dolny brzeg, bez twardej krawędzi grafiki */
+function fxSmoke(row,t,x,gy,o){const m=FXM.smoke,img=fxImg('smoke');if(!okI(img))return;const r=m.rows[row],u=Math.max(0,t)*7,i=Math.floor(u)%8,f=u-Math.floor(u),j=(i+1)%8;
+  SX.globalCompositeOperation='source-over';SX.clearRect(0,0,192,288);SX.globalAlpha=1-f;SX.drawImage(img,i*192,r.r*288,192,288,0,0,192,288);SX.globalAlpha=f;SX.drawImage(img,j*192,r.r*288,192,288,0,0,192,288);SX.globalAlpha=1;
+  SX.globalCompositeOperation='destination-in';const g=SX.createLinearGradient(0,0,0,288);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.12,'#000');g.addColorStop(.5,'#000');g.addColorStop(.9,'rgba(0,0,0,0)');SX.fillStyle=g;SX.fillRect(0,0,192,288);
+  const s=o.s||1,c=ctx;c.save();c.globalAlpha=o.a!=null?o.a:1;c.drawImage(SC,x-192*s/2,gy-m.gy*s,192*s,288*s);c.restore()}
+function fxDraw(n,row,t,x,gy,o={}){if(n==='smoke')return fxSmoke(row,t,x,gy,o);const m=FXM[n],r=m.rows[row],img=fxImg(n);if(!okI(img))return false;
   const i=fxFr(n,row,t),s=o.s||1,W=m.cw*s,H=m.ch*s,c=ctx;c.save();if(o.a!=null)c.globalAlpha=o.a;if(o.add)c.globalCompositeOperation='lighter';
   if(o.flip){c.translate(x,0);c.scale(-1,1);x=0}
   c.drawImage(img,i*m.cw,r.r*m.ch,m.cw,m.ch,x-W/2,gy-m.gy*s-(o.dy||0),W,H);c.restore();return true}
@@ -3893,11 +3899,11 @@ function fxDrawFire(fr){const c=ctx,gy=F[fr.f]+4,st=fr.state,d=BLD[fr.sz],t=fr.t
   switch(fr.sz){
     case's':fxDraw('fire_small',row,tt,fr.x,gy,{});break;
     case'm':{fxDraw('fire_med',row,tt,fr.x-fr.w*.2,gy,{s:.85});fxDraw('fire_med',row,tt+.37,fr.x+fr.w*.22,gy,{s:1.05,flip:true});break}
-    case'b':{fxBand(row,tt,fr.x,gy,fr.w,1,.72);if(st==='loop')fxDraw('smoke','thick',time+fr.ph,fr.x,gy-150,{a:.5,s:.8});break}
+    case'b':{fxBand(row,tt,fr.x,gy,fr.w,1,.72);if(st==='loop')fxDraw('smoke','thick',time+fr.ph,fr.x,gy-185,{a:.5,s:.8});break}
     case'st':fxBand(row,tt,fr.x,gy+3,fr.w*1.25,1,.5);break;
     case'pf':fxBand(row,tt,fr.x,gy+3,fr.w*1.2,1,.38);break;
     case'vb':{const o=fr.obj,hh=o?o.h:150,g0=gy+2-hh*.45,sc=o?(o.v==='bus'?1.15:o.v==='van'?1:.95):1,hot=o&&o.fuse!=null&&o.fuse<4.5?1.15:1,w=(o?o.w:300);
-      const sgn=o&&o.flip?-1:1;if(st==='loop')fxDraw('smoke','thick',time+fr.ph,fr.x-sgn*w*.1,gy-hh*.75,{a:.55,s:.8});
+      const sgn=o&&o.flip?-1:1;if(st==='loop')fxDraw('smoke','thick',time+fr.ph,fr.x-sgn*w*.1,gy-hh*.9,{a:.55,s:.8});
       const nb=o&&o.v==='bus'?3:2;for(let i=0;i<nb;i++){const dx=(i-(nb-1)/2)*w*.3;fxBand(row,tt+i*.3,fr.x+dx,gy+2-hh*.62,w*.4,Math.min(1,.85*hot),.42*sc*hot)}break}
     case'fb':break}}
 /* płomienie przyczepione do ciała: głowa, ramiona, ręce, tułów, biodra, kolana, stopy */
