@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.18.1';
+const GAME_VER='0.18.2';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4133,6 +4133,10 @@ let SYKT=0;
 updSpitFx=(function(_u){return function(dt){_u(dt);const p=player;if(!p||p.dead)return;SYKT-=dt;if(SYKT>0)return;
   let best=null,bd=480;for(const q of SZPUD){if(q.f!==p.f)continue;const d=Math.abs(q.x-p.x);if(d<bd){bd=d;best=q}}
   if(best){snd('kwas_syk_petla',best.x,.4);SYKT=2.6}else SYKT=.6}})(updSpitFx);
+/* drzwi budynku mają pierwszeństwo przed rynną stojącą tuż obok (inaczej nie dało się wejść) */
+interactTargets=(function(_f){return function(){const o=_f();const p=player;if(!p)return o;
+  for(const t of o)if(t.label==='Otwórz drzwi'||t.label==='Zamknij drzwi'||t.label==='Wejdź frontowymi drzwiami'||t.label==='Wyjdź frontowymi drzwiami')t.pri=Math.min(t.pri||0,-.5);
+  o.sort((a,b)=>(a.pri||0)-(b.pri||0)||Math.abs(a.x-p.x)-Math.abs(b.x-p.x));return o}})(interactTargets);
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
