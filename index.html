@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.18.6';
+const GAME_VER='0.18.7';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4160,6 +4160,9 @@ renderGloss=(function(_r){return function(tab){_r(tab);if(tab!=='zombie')return;
    rest.innerHTML='<b class="gn">'+d.n+'</b><div class="gs">'+d.sub+'</div><p>'+d.text+'</p><div class="kv"><span>Wytrzymałość</span><span>'+(Math.ceil(T.hp*1.6/WP.kij.dmg))+'–'+Math.ceil(T.hp*1.6/(WP.kij.dmg*.8))+' ciosy kijem</span><span>'+d.kv[0]+'</span><span>'+d.kv[1]+'</span><span>'+d.kv2[0]+'</span><span>'+d.kv2[1]+'</span><span>Spotykany</span><span>ok. co trzeci Śmieciarz</span><span>'+d.kv3[0]+'</span><span>'+d.kv3[1]+'</span></div>'}}
  for(const[v,l]of defs){const b=document.createElement('button');b.className='tab';b.dataset.v=v;b.textContent=l;b.style.padding='5px 12px';b.style.fontSize='12px';b.onclick=e=>{e.stopPropagation();show(v)};bar.appendChild(b)}
  body.innerHTML='<div class="smvbody">'+base.body+'</div>';body.insertBefore(bar,body.firstChild);show('z')}})(renderGloss);
+/* kruk: wiersz 'fly' w arkuszu to stojący ptak, więc lot składam z klatek ze skrzydłami (dive/land/takeoff) */
+{const a=ZT.kruk.meta.a,pick=[['dive',3],['land',3],['takeoff',3],['land',3],['dive',4],['land',2],['dive',4],['dive',3]];
+ if(!a.fly_orig)a.fly_orig=a.fly;a.fly=pick.map(([n,i])=>a[n][i])}
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
