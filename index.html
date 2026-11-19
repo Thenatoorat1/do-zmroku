@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.17.0';
+const GAME_VER='0.17.1';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3860,8 +3860,7 @@ function fxSpawnLevel(poi){if(!LV)return;for(const n of['fire_small','fire_med',
   const n=cands.length&&R()<.72?(R()<.3?2:1):0;
   for(let i=0;i<n&&cands.length;i++){const c=cands.splice((R()*cands.length)|0,1)[0];
     c.loot=c.loot.concat([['bandaz',.55,1,2],['woda',.5,1,2],['mre',.35,1,2],['antibiotics',.22,1,1],['molotov',.12,1,1],['gasnica',.1,1,1]]);
-    addFire(c.x,c.f,R()<.5?'b':'m',{cont:c,src:'room',w:R()<.5?150:210,snd:false});
-    if(R()<.7)addFire(c.x+(R()<.5?-1:1)*(70+R()*40),c.f,'s',{cont:c,src:'room',snd:false})}
+    addFire(c.x,c.f,'m',{cont:c,src:'room',w:120,snd:false})}
   for(const p of props)if(p.t==='lp'&&p.lp==='skeleton')FXO.push({k:'fly',x:p.x,f:p.f,w:60,ph:R()*9});
   /* pogoda */
   const r=R();WX.t='';WX.k=0;WX.flash=0;WX.next=5+R()*6;WX.in=1;
@@ -3901,7 +3900,7 @@ function fxDrawFire(fr){const c=ctx,gy=F[fr.f]+4,st=fr.state,d=BLD[fr.sz],t=fr.t
   const row=st==='start'?'start':st==='die'?'die':'loop',tt=st==='loop'?t+fr.ph:t,a=st==='die'?1:1;
   switch(fr.sz){
     case's':fxDraw('fire_small',row,tt,fr.x,gy,{});break;
-    case'm':{fxDraw('fire_med',row,tt,fr.x-fr.w*.2,gy,{s:.85});fxDraw('fire_med',row,tt+.37,fr.x+fr.w*.22,gy,{s:1.05,flip:true});break}
+    case'm':fxBand(row,tt,fr.x,gy,fr.w,1,.55);break;
     case'b':{fxBand(row,tt,fr.x,gy,fr.w,1,.72);if(st==='loop')fxDraw('smoke','thick',time+fr.ph,fr.x,gy-185,{a:.5,s:.8});break}
     case'st':fxBand(row,tt,fr.x,gy+3,fr.w*1.25,1,.5);break;
     case'pf':fxBand(row,tt,fr.x,gy+3,fr.w*1.2,1,.38);break;
@@ -3910,8 +3909,9 @@ function fxDrawFire(fr){const c=ctx,gy=F[fr.f]+4,st=fr.state,d=BLD[fr.sz],t=fr.t
       const nb=o&&o.v==='bus'?3:2;for(let i=0;i<nb;i++){const dx=(i-(nb-1)/2)*w*.3;fxBand(row,tt+i*.3,fr.x+dx,gy+2-hh*.62,w*.4,Math.min(1,.85*hot),.42*sc*hot)}break}
     case'fb':break}}
 /* płomienie przyczepione do ciała: głowa, ramiona, ręce, tułów, biodra, kolana, stopy */
-const BODYF=[[-.1,.02,.8],[.1,.02,.8],[0,.04,1],[-.07,.68,.36]];
+const BODYF=[[-.07,.68,.36]];
 function fxBurnBody(x,y,H,age,seed,left){const k=H/175,a=clamp(left/.7,0,1);if(a<=.02)return;
+  if(age>.05)fxBand('loop',time*1.1+seed,x,y+6*k,Math.min(1,age*3)*92*k,a*.96,.4*k);
   const n=BODYF.length;for(let i=0;i<n;i++){const b=BODYF[i],d=i*.12;if(age<d)continue;const g=Math.min(1,(age-d)*2.5),sw=Math.sin(time*7+i*1.9+seed)*1.6*k;
     fxDraw('fire_small','loop',time*1.1+i*.37+seed,x+b[0]*H+sw,y-b[1]*H+6*k,{s:b[2]*k*1.0*g,a:a*.96})}
   if(age>.4)fxDraw('smoke','thin',time+seed,x,y-H*.75,{s:.5*k,a:.45*a})}
@@ -3937,13 +3937,13 @@ function fxDrawWorld(){const c=ctx,vx0=camX-400,vx1=camX+viewW+400;
     else if(a.k==='foam'){const pl=player,row=a.t<.67?'spray_start':a.t<1.4?'spray_loop':'spray_end',tt=a.t<.67?a.t:a.t<1.4?a.t-.67:a.t-1.4;const m=FXM.extinguisher_foam,img=fxImg('extinguisher_foam');if(!okI(img))continue;
       const i=fxFr('extinguisher_foam',row,tt),r=m.rows[row],hx=pl.x+a.face*26,hy=pl.y-88;c.save();c.translate(hx,hy);if(a.face<0)c.scale(-1,1);c.drawImage(img,i*m.cw,r.r*m.ch,m.cw,m.ch,0,-m.ch/2,m.cw,m.ch);c.restore()}}
   for(const d of DEB){const img=fxImg('debris');if(!okI(img))continue;c.save();c.translate(d.x,d.y);c.rotate(d.r);const it=d.it;c.drawImage(img,it.x,it.y,it.w,it.h,-it.w*.25,-it.h*.25,it.w*.5,it.h*.5);c.restore()}
-  if(WX.t==='rain'||WX.t==='storm')for(const s of RS){const pud=s.pud;fxDraw(pud?'rain_splash_puddle':'rain_splash',pud?'splash_puddle':'splash',s.t,s.x,s.y,{a:.8})}}
+  if((WX.t==='rain'||WX.t==='storm')&&WX.in>.3)for(const s of RS){const pud=s.pud;fxDraw(pud?'rain_splash_puddle':'rain_splash',pud?'splash_puddle':'splash',s.t,s.x,s.y,{a:.8})}}
 function fxUpdate(dt){if(!player||mode!=='play')return;
   updFires(dt);updObjs(dt);updMol(dt);
   for(let i=FXA.length-1;i>=0;i--){const a=FXA[i];a.t+=dt;if(a.t>(a.k==='foam'?2.1:1.1))FXA.splice(i,1)}
   for(let i=DEB.length-1;i>=0;i--){const d=DEB[i];d.t+=dt;d.vy+=1100*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.r+=d.vr*dt;if(d.y>F[d.f]-6){d.y=F[d.f]-6;d.vy*=-.3;d.vx*=.5;d.vr*=.4}if(d.t>2.4)DEB.splice(i,1)}
-  const p=player,inB=!!(bAt(p.x,p.f));WX.in=lerp(WX.in,inB?.18:1,Math.min(1,dt*3));
-  if(WX.t==='rain'||WX.t==='storm'){const nn=dt*WX.k*16;for(let q=nn;q>0;q-=1)if(q>=1||R()<q){RS.push({x:camX+R()*viewW,y:F[0]+6+R()*16,t:0,pud:R()<.3})}
+  const p=player,inB=!!(bAt(p.x,p.f)||BGF[p.f]);WX.in=lerp(WX.in,inB?(WX.t==='fog'?.18:0):1,Math.min(1,dt*3));
+  if((WX.t==='rain'||WX.t==='storm')&&WX.in>.3){const nn=dt*WX.k*16;for(let q=nn;q>0;q-=1)if(q>=1||R()<q){RS.push({x:camX+R()*viewW,y:F[0]+6+R()*16,t:0,pud:R()<.3})}
     for(let i=RS.length-1;i>=0;i--){RS[i].t+=dt;if(RS[i].t>.7)RS.splice(i,1)}}
   if(WX.t==='storm'){WX.next-=dt;if(WX.thunder>0)WX.thunder-=dt;
     if(WX.next<=0){WX.next=6+R()*11;WX.flash=.7;WX.bolt=1+((R()*4)|0);WX.bx=p.x+(R()-.5)*1300;const dist=Math.abs(WX.bx-p.x),dl=.25+dist/900*1.6;
