@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.17.3';
+const GAME_VER='0.17.4';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4019,7 +4019,7 @@ function dl(){if(!G.dayLog||G.dayLog.day!==G.day)G.dayLog={day:G.day,raids:[]};r
 const _er=endRaid;endRaid=function(ok){const r=G&&G.raid,p=player;let rec=null;
   if(r&&p&&mode!=='report'){const br={};if(ok)for(const it of p.bag.items)br[it.id]=(br[it.id]||0)+it.qty;
     rec={who:r.raider.first,fem:!!r.raider.fem,loc:r.loc.n,ok:!!ok,kills:kills|0,searched:(stats&&stats.searched)|0,items:br,t:Math.round(clock)}}
-  const res=_er(ok);if(rec)dl().raids.push(rec);return res};
+  const res=_er(ok);if(rec)dl().raids.push(rec);if(G.chars.some(c=>c.alive))$('repNext').textContent='Wróć do bazy';return res};
 const fc=c=>({hp:Math.round(c.hp),hpMax:c.hpMax,hunger:Math.round(c.hunger),thirst:Math.round(c.thirst==null?80:c.thirst),rest:Math.round(c.rest==null?0:c.rest),alive:c.alive,wound:!!c.wound});
 const stock=()=>{let food=0,water=0;for(const it of(G.storage&&G.storage.items)||[]){const d=ID[it.id];if(!d)continue;if(it.id==='woda'||it.id==='dirty_water')water+=it.qty;else if(d.c==='Jedzenie')food+=it.qty}return{food,water}};
 const arrow=(a,b,u='')=>{const d=b-a;return a+' → '+b+u};
