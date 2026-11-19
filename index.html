@@ -2215,7 +2215,6 @@ function mSelect(){
     if(back>18*60&&arr<17*60)h+=`<p class="warn">Nie zdążysz wrócić przed zmrokiem (18:00). Powrót ok. ${fmtClock(back)}.</p>`;
     const far=arr>=17*60,dis=!alive.length||G.raidedToday||far;
     h+=`<button class="btn" id="planBtn" ${dis?'disabled':''}>${G.raidedToday?'Dziś już był wypad':far?'Za daleko na dziś':known?'Planuj wypad':'Zwiad: planuj wypad'}</button>`;
-    if(G.raidedToday)h+='<p class="lead mhint">Wróć do bazy i prześpij się, żeby zacząć nowy dzień.</p>';
   }else{const b=p.baseInfo;
     h+=`<div class="eyebrow">${here?'Twoja kryjówka':'Schronienie · '+b.sizeName}</div><h2>${known?esc(here?'Kryjówka':p.name):'Nieznane schronienie'}</h2>
       <p class="lead mdesc">${known?(b.description||`${b.name}: ${b.slotCount} miejsc na sprzęty${b.roof?', wyjście na dach':''}.`):'Ktoś widział tu dach nad głową. Trzeba sprawdzić.'}</p>
@@ -3112,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.17.1';
+const GAME_VER='0.17.2';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4059,6 +4058,10 @@ const _sn=sleepNight;sleepNight=function(q){
 document.getElementById('dsNext').onclick=()=>{if(mode!=='report'||root.hidden)return;mode='play';$('hud').hidden=false;show(null);if(typeof syncTouch==='function')syncTouch();
   const s=pending.state||['Dzień '+G.day,'Poranek'];showState(s[0],s[1])};
 })();
+/* próba wyjścia z bazy po wypadzie: komunikat zamiast mapy */
+(function(){const _a=askDlg;askDlg=function(t,txt,yes,no,onY,onN){
+  if(t==='Wyjść z kryjówki?'&&G&&G.raidedToday&&G.chars.some(c=>c.alive))return _a('Dziś już był wypad','Ekipa wróciła z wyprawy i nie ruszy dalej przed nocą. Prześpij się w kryjówce, żeby zacząć nowy dzień.','Rozumiem','Zamknij',null,null);
+  return _a(t,txt,yes,no,onY,onN)}})();
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
