@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.16.1';
+const GAME_VER='0.17.0';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4000,6 +4000,65 @@ drawKitFront=(function(_f){return function(b){_f(b);if(!(b.bg&&b.revealed&&b.fx!
   c.save();c.globalAlpha=.88+.1*Math.sin(time*2.4);c.fillStyle='#f3e6b4';c.fillRect(x-hw,y,hw*2,3);c.fillRect(x-hw,y-9,3,12);c.fillRect(x+hw-3,y-9,3,12);c.restore()}})(drawKitFront);
 /* Śmieciarz i Maratończyk: ich death_fall kończy się na kolanach (wys. ~92 px), więc używamy upadku z kick_fall, który kończy leżąc */
 killZombie=(function(_k){return function(z,dir){_k(z,dir);if((z.type==='smieciarz'||z.type==='maratonczyk')&&z.dead&&z.da&&z.da.n==='death_fall')z.da.n='kick_fall'}})(killZombie);
+
+/* ================= PODSUMOWANIE DNIA (po pójściu spać) ================= */
+(function(){
+const root=document.createElement('div');root.id='daySum';root.className='screen';root.hidden=true;
+root.innerHTML=`<div class="wrap dsw"><div class="eyebrow" id="dsEye">Koniec dnia</div><h2 id="dsTitle">Dzień 1 za Wami</h2><p class="lead" id="dsLead"></p>
+<div class="rep" id="dsBody"></div><button class="btn" id="dsNext">Kolejny dzień</button></div>`;
+const st=document.createElement('style');st.textContent=`
+#daySum{z-index:60}.dsw .rep{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.dsw .box h3{margin:0 0 8px}.dsch{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:8px 0;border-top:1px solid var(--line)}.dsch:first-of-type{border-top:0}
+.dsch b{font:700 17px var(--ui);color:#efe7d4}.dsch small{font:500 14px/1.5 var(--ui);color:#a89f8c;grid-column:1/-1}.dsch .dl{font:600 14px var(--ui);color:#d8d0bf;text-align:right}
+.dsch .up{color:#9ccf8a}.dsch .dn{color:#e0806a}.dsch.dead b{color:#e0806a;text-decoration:line-through}
+.dsw .ev{font:500 16px/1.55 var(--ui);color:#d8d0bf;margin:0;padding:3px 0}.dsw .ev em{font-style:normal;color:var(--amber);font-weight:700}
+#dsNext{margin-top:6px}`;
+document.head.appendChild(st);(document.getElementById('game')).appendChild(root);
+const _show=show;show=function(id){root.hidden=id!=='daySum';return _show(id)};
+/* dziennik dnia: wyprawy */
+function dl(){if(!G.dayLog||G.dayLog.day!==G.day)G.dayLog={day:G.day,raids:[]};return G.dayLog}
+const _er=endRaid;endRaid=function(ok){const r=G&&G.raid,p=player;let rec=null;
+  if(r&&p&&mode!=='report'){const br={};if(ok)for(const it of p.bag.items)br[it.id]=(br[it.id]||0)+it.qty;
+    rec={who:r.raider.first,fem:!!r.raider.fem,loc:r.loc.n,ok:!!ok,kills:kills|0,searched:(stats&&stats.searched)|0,items:br,t:Math.round(clock)}}
+  const res=_er(ok);if(rec)dl().raids.push(rec);return res};
+const fc=c=>({hp:Math.round(c.hp),hpMax:c.hpMax,hunger:Math.round(c.hunger),thirst:Math.round(c.thirst==null?80:c.thirst),rest:Math.round(c.rest==null?0:c.rest),alive:c.alive,wound:!!c.wound});
+const stock=()=>{let food=0,water=0;for(const it of(G.storage&&G.storage.items)||[]){const d=ID[it.id];if(!d)continue;if(it.id==='woda'||it.id==='dirty_water')water+=it.qty;else if(d.c==='Jedzenie')food+=it.qty}return{food,water}};
+const arrow=(a,b,u='')=>{const d=b-a;return a+' → '+b+u};
+const pending={coll:[],state:null};
+const _sn=sleepNight;sleepNight=function(q){
+  const log=dl(),day=G.day,before=G.chars.map(c=>[c,fc(c)]),s0=stock(),coll=[];
+  const _t=toast,_ss=showState;toast=m=>coll.push(m);showState=(t,l)=>{pending.state=[t,l]};
+  try{_sn(q)}finally{toast=_t;showState=_ss}
+  if(!G.chars.some(c=>c.alive)||!before.length)return;
+  const s1=stock();
+  const rows=before.map(([c,b])=>{const a=fc(c),he=c.fem?'a':'';let note='';
+    if(!a.alive)return`<div class="dsch dead"><b>${esc(c.first)}</b><span class="dl dn">nie przeżył${he} nocy</span></div>`;
+    const dh=a.hp-b.hp;
+    return`<div class="dsch"><b>${esc(c.first)}</b><span class="dl">Zdrowie <span class="${dh>0?'up':dh<0?'dn':''}">${b.hp} → ${a.hp}</span>/${a.hpMax}</span>
+      <small>Głód ${b.hunger} → ${a.hunger} · Pragnienie ${b.thirst} → ${a.thirst} · Wypoczęcie ${b.rest} → ${a.rest}${a.wound?' · <span class="dn">krwawi</span>':''}</small></div>`}).join('');
+  const raids=log.raids.filter(r=>true);let ev='';
+  if(raids.length)for(const r of raids){const n=Object.values(r.items).reduce((a,b)=>a+b,0),he=r.fem?'a':'';
+    ev+=r.ok?`<p class="ev">${esc(r.who)} wyprawił${he} się do: <em>${esc(r.loc)}</em>. Zabite: ${r.kills}, przeszukane miejsca: ${r.searched}, przyniesione przedmioty: <em>${n}</em>.</p>`
+      :`<p class="ev">${esc(r.who)} nie wrócił${he} z miejsca <em>${esc(r.loc)}</em>.</p>`}
+  else ev='<p class="ev">Tego dnia nikt nie wychodził z kryjówki.</p>';
+  const items={};for(const r of raids)for(const[k,v]of Object.entries(r.items))items[k]=(items[k]||0)+v;
+  const il=Object.entries(items).filter(([k])=>ID[k]).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>`<div><em>×${v}</em> ${esc(ID[k].n)}</div>`).join('');
+  const morn=coll.length?coll.map(m=>`<p class="ev">${m}</p>`).join(''):'<p class="ev">Noc minęła spokojnie.</p>';
+  const dk=raids.reduce((a,r)=>a+r.kills,0);
+  document.getElementById('dsEye').textContent='Noc · koniec dnia '+day;
+  document.getElementById('dsTitle').textContent='Dzień '+day+' za Wami';
+  document.getElementById('dsLead').textContent='Przespaliście noc w kryjówce. Za chwilę zacznie się dzień '+G.day+'. Zabite zombie: '+dk+', wyprawy: '+raids.length+'.';
+  document.getElementById('dsBody').innerHTML=
+    `<div class="box"><h3>Ekipa po nocy</h3>${rows}</div>
+     <div class="box"><h3>Co się wydarzyło</h3>${ev}</div>
+     <div class="box"><h3>Przyniesione do magazynu</h3><div class="list">${il||'Nic.'}</div></div>
+     <div class="box"><h3>Rano w kryjówce</h3>${morn}<p class="ev">Zapasy: jedzenie <em>${arrow(s0.food,s1.food)}</em>, woda <em>${arrow(s0.water,s1.water)}</em>.</p></div>`;
+  G.dayLog={day:G.day,raids:[]};
+  mode='report';$('hud').hidden=true;$('touch').hidden=true;hold.left=hold.right=hold.run=false;show('daySum');
+  const b=document.getElementById('dsNext');b.textContent='Kolejny dzień';try{b.focus()}catch(e){}};
+document.getElementById('dsNext').onclick=()=>{if(mode!=='report'||root.hidden)return;mode='play';$('hud').hidden=false;show(null);if(typeof syncTouch==='function')syncTouch();
+  const s=pending.state||['Dzień '+G.day,'Poranek'];showState(s[0],s[1])};
+})();
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
