@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.18.7';
+const GAME_VER='0.18.8';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4163,6 +4163,8 @@ renderGloss=(function(_r){return function(tab){_r(tab);if(tab!=='zombie')return;
 /* kruk: wiersz 'fly' w arkuszu to stojący ptak, więc lot składam z klatek ze skrzydłami (dive/land/takeoff) */
 {const a=ZT.kruk.meta.a,pick=[['dive',3],['land',3],['takeoff',3],['land',3],['dive',4],['land',2],['dive',4],['dive',3]];
  if(!a.fly_orig)a.fly_orig=a.fly;a.fly=pick.map(([n,i])=>a[n][i])}
+/* nowe ikony amunicji */
+for(const id of['amunicja','naboje_762','srut','belty','kulki'])ICON_AT[id]={src:'ammo_'+id,x:0,y:0,w:256,h:256};
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
