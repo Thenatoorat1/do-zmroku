@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.18.3';
+const GAME_VER='0.18.4';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4139,6 +4139,26 @@ updSpitFx=(function(_u){return function(dt){_u(dt);const p=player;if(!p||p.dead)
 interactTargets=(function(_f){return function(){const o=_f();const p=player;if(!p)return o;
   for(const t of o)if(t.label==='Otwórz drzwi'||t.label==='Zamknij drzwi'||t.label==='Wejdź frontowymi drzwiami'||t.label==='Wyjdź frontowymi drzwiami')t.pri=Math.min(t.pri||0,-.5);
   o.sort((a,b)=>(a.pri||0)-(b.pri||0)||Math.abs(a.x-p.x)-Math.abs(b.x-p.x));return o}})(interactTargets);
+/* glosariusz: zakładki wariantów Śmieciarza (zwykły / kwas / szczury) */
+const SMV={
+ k:{n:'Nabrzmiały: kwas',sub:'Wariant Śmieciarza',text:'Brzuch pełen żrącej mazi. Nie atakuje – podchodzi, nabrzmiewa i pęka w twoją stronę. Kwas parzy, spowalnia, zatruwa i zostawia kałuże, które długo syczą na ziemi.',kv:['Wybuch','po 3–4 ciosach albo gdy podejdzie blisko'],kv2:['Kwas','stożek ok. 220 px, 6–17 obrażeń + zatrucie i spowolnienie'],kv3:['Jak sobie radzić','zabij z dystansu lub od tyłu, omijaj kałuże']},
+ s:{n:'Nabrzmiały: szczury',sub:'Wariant Śmieciarza',text:'W brzuchu coś się rusza. Gdy pęknie, wylewa się z niego kilka głodnych szczurów, które od razu rzucają się na najbliższą osobę.',kv:['Wybuch','po 3–4 ciosach albo gdy podejdzie blisko'],kv2:['Szczury','4–6 sztuk, od razu w pościgu (ogień je trawi)'],kv3:['Jak sobie radzić','zabij z dystansu lub od tyłu, szczury łatwo padają']}};
+function smvImg(v){const c=document.createElement('canvas');c.width=c.height=256;const f=SMZ[v].walk[0];
+ const im=SMI[v],dr=()=>{try{c.getContext('2d').drawImage(im,f[0],f[1],256,256,0,0,256,256)}catch(e){}};
+ if(im.complete&&im.naturalWidth)dr();else im.addEventListener('load',()=>{dr();const e=document.querySelector('.smvimg[data-v="'+v+'"]');if(e)e.src=c.toDataURL()});
+ return c}
+renderGloss=(function(_r){return function(tab){_r(tab);if(tab!=='zombie')return;
+ const T=ZT.smieciarz,card=[...document.querySelectorAll('#glList .ge.wide')].find(e=>{const b=e.querySelector('.gn');return b&&b.textContent===T.n});if(!card)return;
+ const gi=card.querySelector('.gi'),body=card.children[1],base={gi:gi.innerHTML,body:body.innerHTML};
+ const bar=document.createElement('div');bar.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px';
+ const defs=[['z','Zwykły'],['k','Kwas'],['s','Szczury']];
+ function show(v){[...bar.children].forEach(b=>{b.style.opacity=b.dataset.v===v?1:.5;b.style.borderColor=b.dataset.v===v?'var(--accent,#d6a23a)':''});
+  const rest=body.querySelector('.smvbody');
+  if(v==='z'){gi.innerHTML=base.gi;rest.innerHTML=base.body}
+  else{const d=SMV[v],c=smvImg(v);gi.innerHTML='<img class="smvimg" data-v="'+v+'" alt="" src="'+c.toDataURL()+'">';
+   rest.innerHTML='<b class="gn">'+d.n+'</b><div class="gs">'+d.sub+'</div><p>'+d.text+'</p><div class="kv"><span>Wytrzymałość</span><span>'+(Math.ceil(T.hp*1.6/WP.kij.dmg))+'–'+Math.ceil(T.hp*1.6/(WP.kij.dmg*.8))+' ciosy kijem</span><span>'+d.kv[0]+'</span><span>'+d.kv[1]+'</span><span>'+d.kv2[0]+'</span><span>'+d.kv2[1]+'</span><span>Spotykany</span><span>ok. co trzeci Śmieciarz</span><span>'+d.kv3[0]+'</span><span>'+d.kv3[1]+'</span></div>'}}
+ for(const[v,l]of defs){const b=document.createElement('button');b.className='tab';b.dataset.v=v;b.textContent=l;b.style.padding='5px 12px';b.style.fontSize='12px';b.onclick=e=>{e.stopPropagation();show(v)};bar.appendChild(b)}
+ body.innerHTML='<div class="smvbody">'+base.body+'</div>';body.insertBefore(bar,body.firstChild);show('z')}})(renderGloss);
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
