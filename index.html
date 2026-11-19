@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.18.0';
+const GAME_VER='0.18.1';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -4069,7 +4069,7 @@ const SMI={k:loadImg('a/npc/smieciarz_kwas.webp'),s:loadImg('a/npc/smieciarz_szc
 for(const v of['k','s'])for(const[a,fr]of Object.entries(SMZ[v]))ZT.smieciarz.meta.a[a+'_'+v]=fr;
 ZT.smieciarz.text+=' Czasem jest jednak nabrzmiały: brzuch ma napięty jak balon, pełen kwasu albo szczurów. Kilka uderzeń albo zbliżenie się do ciebie i wybucha w twoją stronę. Najbezpieczniej zabić go z daleka albo od tyłu.';
 ZT.smieciarz.kvx+='<span>Nabrzmiały</span><span>wybucha kwasem lub szczurami</span>';
-Object.assign(SND.n,{smieciarz_wybuch_stinger:3});
+Object.assign(SND.n,{smieciarz_wybuch_stinger:3,kwas_chlupniecie:3,kwas_syk_petla:3,smieciarz_brzuch_bulgot:3,smieciarz_nabrzmiewa:3,smieciarz_wybuch_kwas:3,smieciarz_wybuch_szczury:3,szczury_wylot_pisk:3});
 const BLC=.35,BLSW=1.0;
 /* --- losowanie wariantu przy powstaniu zombie --- */
 newZombie=(function(_n){return function(x,f,face,type){const z=_n(x,f,face,type);
@@ -4094,9 +4094,9 @@ drawZSprite=(function(_d){return function(z){if(!z.bloat)return _d(z);
     FCX.globalCompositeOperation='destination-in';const g=FCX.createLinearGradient(200,0,255,0);g.addColorStop(0,'#000');g.addColorStop(1,'rgba(0,0,0,0)');FCX.fillStyle=g;FCX.fillRect(0,0,256,256);src=FCV;sx=0;sy=0}
   c.save();c.translate(z.x,z.y+(z.z||0)+2);c.scale((z.face||1)*(flip?-1:1)*k,k);c.drawImage(src,sx,sy,256,256,-f[4],-f[5],256,256);c.restore()}})(drawZSprite);
 /* --- mechanika --- */
-function bloatStart(z){if(z.bl||z.dead)return;z.bl={t:0};const p=player;if(p)z.face=Math.sign(p.x-z.x)||z.face;z.moving=false;z.state='chase';z.act=null}
+function bloatStart(z){if(z.bl||z.dead)return;snd('smieciarz_nabrzmiewa',z.x,.9);z.bl={t:0};const p=player;if(p)z.face=Math.sign(p.x-z.x)||z.face;z.moving=false;z.state='chase';z.act=null}
 function bloatBurst(z){const p=player,f=z.face||1;
-  snd('smieciarz_wybuch_stinger',null,.9);emitNoise(z.x,z.f,520,'combat');shake=Math.max(shake||0,9);
+  snd('smieciarz_wybuch_stinger',null,.6);snd(z.bloat==='k'?'smieciarz_wybuch_kwas':'smieciarz_wybuch_szczury',z.x,1);if(z.bloat==='s')setTimeout(()=>snd('szczury_wylot_pisk',z.x,.8),220);emitNoise(z.x,z.f,520,'combat');shake=Math.max(shake||0,9);
   if(z.bloat==='k'){for(const d of[85,140,195])szSplash(z.x+f*d,z.f);
     if(p&&!p.dead&&!p.hidden&&!p.stair&&!p.climb&&p.f===z.f){const d=(p.x-z.x)*f;
       if(d>-25&&d<225){lightHurt(z,Math.max(6,Math.round(17-Math.max(0,d)/16)));p.slowT=Math.max(p.slowT||0,4.5);p.poison=Math.max(p.poison||0,5);flashT=Math.max(flashT||0,.3);SZPUD.push({x:p.x,f:p.f,t:0,life:5});showState('Zatrucie','Uwaga:');
@@ -4108,6 +4108,7 @@ updZombie=(function(_u){return function(z,dt){
   if(z.bloat){
     if(z.dead){if(z.bu&&!z.bu.fx&&z.da&&z.da.t>=.2){z.bu.fx=1;bloatBurst(z)}return _u(z,dt)}
     const p=player;
+    if(p&&z.f===p.f&&Math.abs(z.x-p.x)<750&&!(z.bgT>time)){z.bgT=time+2.35+R()*.3;snd('smieciarz_brzuch_bulgot',z.x,.55)}
     if(!G.blSeen&&p&&z.f===p.f&&Math.abs(z.x-p.x)<900&&!p.dead){G.blSeen=true;toast('Nabrzmiały Śmieciarz. Nie bij go w zwarciu: wybuchnie. Zabij z daleka, od tyłu albo uciekaj.',3600)}
     if(z.bl){z.bl.t+=dt;z.moving=false;z.kb=0;z.eating=false;if(z.bl.t>=BLSW){z.hp=0;killZombie(z,z.face||1)}return}
     if(z.state==='attack'||(z.state==='chase'&&p&&z.f===p.f&&!p.dead&&!z.stair&&!z.down&&!(z.stagger>0)&&Math.abs(p.x-z.x)<105)){
@@ -4125,6 +4126,13 @@ let BLTRK=null;
 musMood=(function(_m){return function(){const md=_m();if(!MOODS.smieciarz){MOODS.smieciarz=MOODS.chase;PROG.smieciarz=PROG.chase}
   if((md==='chase'||md==='day'||md==='night')&&player&&zombies.some(z=>z.bloat&&!z.dead&&z.f===player.f&&Math.abs(z.x-player.x)<900)){if(!BLTRK)BLTRK=R()<.5?'smieciarz_napiecie_1':'smieciarz_napiecie_2';TRK_FILE.smieciarz=BLTRK;return'smieciarz'}
   return md}})(musMood);
+
+/* kałuże kwasu: chlupnięcie przy rozbryzgu i cichy syk, gdy gracz jest blisko */
+szSplash=(function(_s){return function(x,f,hit){snd('kwas_chlupniecie',x,.55);return _s(x,f,hit)}})(szSplash);
+let SYKT=0;
+updSpitFx=(function(_u){return function(dt){_u(dt);const p=player;if(!p||p.dead)return;SYKT-=dt;if(SYKT>0)return;
+  let best=null,bd=480;for(const q of SZPUD){if(q.f!==p.f)continue;const d=Math.abs(q.x-p.x);if(d<bd){bd=d;best=q}}
+  if(best){snd('kwas_syk_petla',best.x,.4);SYKT=2.6}else SYKT=.6}})(updSpitFx);
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
