@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.15.8';
+const GAME_VER='0.15.9';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3433,12 +3433,15 @@ function drawSideWin(wn,b,y0,h){let kind=(b&&(b.win==='window_boarded'||b.win===
   ctx.save();ctx.translate(wn.x+17,yb-ih);ctx.scale(-1,1);ctx.drawImage(img,0,0,21,ih);ctx.restore()}
 /* barierka schodów przed postacią: ponownie rysuje grafikę schodów, przyciętą do pasa nad linią stopni */
 function drawKitStairRail(b){const st=b.stair;if(!st||!st.D)return;if(!(b.revealed||(player&&player.peek&&player.peek.b===b)))return;const D=st.D,s=st.s,c=ctx,p=D.p;
+  /* nakładka poręczy tylko dla postaci NA schodach (wchodzą za poręcz); stojący na podłodze są przed nią */
+  let ex0=1e9,ex1=-1e9;const ents=[player,...zombies];for(const e of ents){if(!e||e.dead||!e.stair||e.x<st.sl-80||e.x>st.sl+st.sw+80)continue;ex0=Math.min(ex0,e.x-90);ex1=Math.max(ex1,e.x+90)}
+  if(ex0>ex1)return;
   const wx=ax=>st.flip?st.sl+(D.W-ax)*s:st.sl+ax*s,wy=ay=>F[0]+SOFF-(D.H-ay)*s;
   c.save();c.beginPath();let any=false;
   for(let i=0;i<p.length-1;i++){const a=p[i],e=p[i+1];if(Math.abs(e[1]-a[1])<20)continue;any=true;
     const top=(D.typ==='prosty'||D.W>1000)?330:230;
     c.moveTo(wx(a[0]),wy(a[1]-22));c.lineTo(wx(e[0]),wy(e[1]-22));c.lineTo(wx(e[0]),wy(e[1]-top));c.lineTo(wx(a[0]),wy(a[1]-top));c.closePath()}
-  if(any){c.clip();dImg(stairImg(st,''),st.sl,F[0]+SOFF-D.H*s,st.sw,D.H*s,st.flip)}
+  if(any){c.clip();c.beginPath();c.rect(ex0,-1e5,ex1-ex0,2e5);c.clip();dImg(stairImg(st,''),st.sl,F[0]+SOFF-D.H*s,st.sw,D.H*s,st.flip)}
   c.restore()}
 
 /* ================= ZOMBIE ZWIERZĘTA: pies, kot, szczur, kruk (miasto), sarna, niedźwiedź (las) ================= */
