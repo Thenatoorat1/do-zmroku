@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.17.2';
+const GAME_VER='0.17.3';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3909,10 +3909,10 @@ function fxDrawFire(fr){const c=ctx,gy=F[fr.f]+4,st=fr.state,d=BLD[fr.sz],t=fr.t
     case'fb':break}}
 /* płomienie przyczepione do ciała: głowa, ramiona, ręce, tułów, biodra, kolana, stopy */
 const BODYF=[[-.07,.68,.36]];
-function fxBurnBody(x,y,H,age,seed,left){const k=H/175,a=clamp(left/.7,0,1);if(a<=.02)return;
-  if(age>.05)fxBand('loop',time*1.1+seed,x,y+6*k,Math.min(1,age*3)*92*k,a*.96,.4*k);
+function fxBurnBody(x,y,H,age,seed,left,face){const k=H/175,a=clamp(left/.7,0,1);if(a<=.02)return;const bx=x-(face||0)*17*k;
+  if(age>.05)fxBand('loop',time*1.1+seed,bx,y+6*k,Math.min(1,age*3)*92*k,a*.96,.4*k);
   const n=BODYF.length;for(let i=0;i<n;i++){const b=BODYF[i],d=i*.12;if(age<d)continue;const g=Math.min(1,(age-d)*2.5),sw=Math.sin(time*7+i*1.9+seed)*1.6*k;
-    fxDraw('fire_small','loop',time*1.1+i*.37+seed,x+b[0]*H+sw,y-b[1]*H+6*k,{s:b[2]*k*1.0*g,a:a*.96})}
+    fxDraw('fire_small','loop',time*1.1+i*.37+seed,bx+b[0]*H*(face||1)+sw,y-b[1]*H+6*k,{s:b[2]*k*1.0*g,a:a*.96})}
   if(age>.4)fxDraw('smoke','thin',time+seed,x,y-H*.75,{s:.5*k,a:.45*a})}
 function fxDrawWorld(){const c=ctx,vx0=camX-400,vx1=camX+viewW+400;
   /* kałuże/zarodniki/muchy (przed płomieniami) */
@@ -3925,8 +3925,8 @@ function fxDrawWorld(){const c=ctx,vx0=camX-400,vx1=camX+viewW+400;
     else if(o.k==='veh'&&o.st==='boom'){const sc=o.v==='bus'?.8:o.v==='van'?.58:.5;fxMask('vehicle_explosion_fx','boom',o.t*.9,o.x,gy+8,sc)}}
   for(const z of zombies)if(z.dead&&z.x>vx0&&z.x<vx1&&z.fxD>4&&((z.ph*7)|0)%3===0)fxDraw('fly_swarm','loop',time*.9+z.ph,z.x,F[z.f]-6,{s:.5,a:.8});
   for(const fr of FIRES){if(fr.x<vx0||fr.x>vx1||fr.sz==='vb'||!layerVis(fr))continue;fxDrawFire(fr)}
-  for(const z of zombies){if(z.dead||!(z.burnT>0)||z.x<vx0||z.x>vx1||!layerVis(z))continue;fxBurnBody(z.x,z.y+(z.jy||0),(ZT[z.type]||{}).H||175,z.bAge||0,z.ph*7,z.burnT)}
-  const p=player;if(p&&p.burnT>0&&!p.dead)fxBurnBody(p.x,p.y,175,p.bAge||0,3.3,p.burnT);
+  for(const z of zombies){if(z.dead||!(z.burnT>0)||z.x<vx0||z.x>vx1||!layerVis(z))continue;fxBurnBody(z.x,z.y+(z.jy||0),(ZT[z.type]||{}).H||175,z.bAge||0,z.ph*7,z.burnT,z.face)}
+  const p=player;if(p&&p.burnT>0&&!p.dead)fxBurnBody(p.x,p.y,175,p.bAge||0,3.3,p.burnT,p.face);
   for(const m of MOL){const img=fxImg('molotov_fly');if(!okI(img))continue;c.save();c.translate(m.x,m.y);c.rotate(m.rot);c.drawImage(img,0,0,72,72,-30,-30,60,60);c.restore()}
   for(const a of FXA){const gy=F[a.f]+4;
     if(a.k==='puff')fxDraw('fire_out_puff','puff',a.t,a.x,gy+2,{a:.9});
