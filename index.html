@@ -3112,7 +3112,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.15.9';
+const GAME_VER='0.16.0';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3995,6 +3995,9 @@ const BGS=.74,BGDY=66;
 function bgXf(b,fn){const c=ctx,px=b.fx!=null?b.fx:(b.x0+b.x1)/2,py=F[0]+17+FDY;c.save();c.translate(px,py-BGDY);c.scale(BGS,BGS);c.translate(-px,-py);try{fn()}finally{c.restore()}}
 drawKitFacade=(function(_f){return function(b){if(b.bg&&!b.revealed)bgXf(b,()=>_f(b));else _f(b)}})(drawKitFacade);
 drawKitRoof=(function(_f){return function(b){if(b.bg&&!b.revealed)bgXf(b,()=>_f(b));else _f(b)}})(drawKitRoof);
+/* znacznik wyjścia: cienka linia na podłodze w miejscu frontowych drzwi (wnętrze budynku widzianego od frontu) */
+drawKitFront=(function(_f){return function(b){_f(b);if(!(b.bg&&b.revealed&&b.fx!=null&&b.fA!=null))return;const c=ctx,y=F[b.fA]-3,x=b.fx,hw=46;
+  c.save();c.globalAlpha=.88+.1*Math.sin(time*2.4);c.fillStyle='#f3e6b4';c.fillRect(x-hw,y,hw*2,3);c.fillRect(x-hw,y-9,3,12);c.fillRect(x+hw-3,y-9,3,12);c.restore()}})(drawKitFront);
 
 /* ================= FLOW ================= */
 let flashT=0,spawnT=0,nightWarned=false,raidKills=0;
