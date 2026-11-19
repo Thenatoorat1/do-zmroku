@@ -3111,7 +3111,7 @@ updHud=(function(_u){let last='';return function(){_u();const ch=player&&player.
 (function(){const fix=()=>{const d=Math.min(window.devicePixelRatio||1,2);if(Math.abs(cv.width-Math.round(innerWidth*d))>2||Math.abs(cv.height-Math.round(innerHeight*d))>2)resize()};
   addEventListener('orientationchange',()=>setTimeout(fix,250));if(window.visualViewport)visualViewport.addEventListener('resize',fix);setInterval(fix,400);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(fix,100)})})();
-const GAME_VER='0.18.5';
+const GAME_VER='0.18.6';
 (function(){for(const id of['menu','pause']){const el=$(id);if(!el)continue;const v=document.createElement('div');v.className='gver';v.textContent='wersja '+GAME_VER;el.appendChild(v)}
   const st=document.createElement('style');st.textContent='.gver{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));font:500 12px "Barlow Semi Condensed",Arial,sans-serif;color:#8f877a;letter-spacing:.04em;pointer-events:none}';document.head.appendChild(st)})();
 
@@ -3770,7 +3770,7 @@ function updFires(dt){const p=player,rain=WX.t==='rain'||WX.t==='storm';
       if(fr.lamp){fr.lamp.r=BLD[fr.sz][3]*(.9+Math.sin(time*9+fr.ph)*.1)}
       if(!fr.out){
         const half=fr.w*.5;
-        if(p&&!p.dead&&p.f===fr.f&&!p.stair&&!p.climb&&!p.fallJ&&Math.abs(p.x-fr.x)<half+12){p.burnT=Math.max(p.burnT||0,2.6);p.inFire=.15}
+        if(p&&!p.dead&&!(fr.sz==='vb'&&p.crouch)&&p.f===fr.f&&!p.stair&&!p.climb&&!p.fallJ&&Math.abs(p.x-fr.x)<half+12){p.burnT=Math.max(p.burnT||0,2.6);p.inFire=.15}
         for(const z of zombies)if(!z.dead&&z.f===fr.f&&!z.stair&&Math.abs(z.x-fr.x)<half+10)igniteZ(z,4);
         for(const o of FXO)if(o.f===fr.f&&o!==fr.obj&&Math.abs(o.x-fr.x)<o.w*.5+half*.7)fxIgnite(o)}
       else{fr.state='die';fr.t=0;fireOut(fr)}}
@@ -4138,6 +4138,7 @@ updSpitFx=(function(_u){return function(dt){_u(dt);const p=player;if(!p||p.dead)
 /* drzwi budynku mają pierwszeństwo przed rynną stojącą tuż obok (inaczej nie dało się wejść) */
 interactTargets=(function(_f){return function(){const o=_f();const p=player;if(!p)return o;
   for(const t of o)if(t.label==='Otwórz drzwi'||t.label==='Zamknij drzwi'||t.label==='Wejdź frontowymi drzwiami'||t.label==='Wyjdź frontowymi drzwiami')t.pri=Math.min(t.pri||0,-.5);
+  for(const t of o)if(/^Podgl/.test(t.label||''))t.pri=-.4;
   o.sort((a,b)=>(a.pri||0)-(b.pri||0)||Math.abs(a.x-p.x)-Math.abs(b.x-p.x));return o}})(interactTargets);
 /* glosariusz: zakładki wariantów Śmieciarza (zwykły / kwas / szczury) */
 const SMV={
